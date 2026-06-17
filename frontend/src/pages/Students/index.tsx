@@ -1,14 +1,60 @@
 import { useState } from 'react';
-import { useStudents } from '@/hooks/queries';
+import { useStudents, useSubjects, useCreateStudent } from '@/hooks/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Ghost, Plus, MapPin, Phone, StickyNote, Baby, Building2 } from 'lucide-react';
+import { Ghost, Plus, MapPin, Phone, StickyNote, Baby, Building2, Loader2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
+
+const createStudentSchema = z.object({
+  fullName: z.string().min(1, 'Họ tên không được để trống'),
+  address: z.string().optional(),
+  apartmentFloor: z.string().optional(),
+  parentPhone: z.string().optional(),
+  note: z.string().optional(),
+  subjectIds: z.array(z.number()).optional(),
+});
+
+type CreateStudentFormValues = z.infer<typeof createStudentSchema>;
 
 const StudentsPage = () => {
   const { data: response, isLoading, error } = useStudents();
   const students = response?.data || [];
+  const { data: subjectsResponse } = useSubjects();
+  const subjects = subjectsResponse?.data || [];
+  const createStudent = useCreateStudent();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  const form = useForm<CreateStudentFormValues>({
+    resolver: zodResolver(createStudentSchema),
+    defaultValues: {
+      fullName: '',
+      address: '',
+      apartmentFloor: '',
+      parentPhone: '',
+      note: '',
+      subjectIds: [],
+    },
+  });
+
+  const onSubmit = (data: CreateStudentFormValues) => {
+    createStudent.mutate(data, {
+      onSuccess: () => {
+        toast.success('Thêm học sinh thành công!');
+        setIsAddDialogOpen(false);
+        form.reset();
+      },
+      onError: (err: any) => {
+        toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi thêm học sinh.');
+      },
+    });
+  };
 
   return (
     <div className="p-4 md:p-8 space-y-6 pb-24 md:pb-8">
@@ -22,14 +68,132 @@ const StudentsPage = () => {
               <span className="sm:hidden">Thêm</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="rounded-3xl border-primary/20 max-w-md w-[90vw]">
+          <DialogContent className="rounded-3xl border-primary/20 max-w-md w-[90vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-center text-xl text-primary-foreground">Thêm học sinh mới 🧸</DialogTitle>
             </DialogHeader>
-            <div className="py-8 flex flex-col items-center justify-center space-y-4">
-              <Baby className="w-16 h-16 text-primary animate-bounce" />
-              <p className="text-muted-foreground text-center px-4">Tính năng thêm học sinh đang được xây dựng!</p>
-            </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Họ và tên *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nguyễn Văn A" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Địa chỉ</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Số nhà, đường, phường..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="apartmentFloor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tầng/Căn hộ</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Tầng 5, P502..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="parentPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SĐT Phụ huynh</FormLabel>
+                        <FormControl>
+                          <Input placeholder="0987..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="subjectIds"
+                  render={() => (
+                    <FormItem>
+                      <div className="mb-4">
+                        <FormLabel className="text-base">Môn học</FormLabel>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {subjects.map((item) => (
+                          <FormField
+                            key={item.id}
+                            control={form.control}
+                            name="subjectIds"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={item.id}
+                                  className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(item.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...(field.value || []), item.id])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (value) => value !== item.id
+                                              )
+                                            )
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal cursor-pointer text-sm">
+                                    {item.name}
+                                  </FormLabel>
+                                </FormItem>
+                              )
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="note"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ghi chú</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Thông tin thêm..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full rounded-2xl mt-4" disabled={createStudent.isPending}>
+                  {createStudent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Lưu học sinh
+                </Button>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </div>

@@ -9,6 +9,14 @@ export const useTodos = () => useQuery({ queryKey: ['dashboard', 'todos'], query
 export const useStudents = (page?: number, limit?: number, search?: string) => 
   useQuery({ queryKey: ['students', page, limit, search], queryFn: () => studentApi.getAll(page, limit, search) });
 
+export const useCreateStudent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: studentApi.create,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['students'] }),
+  });
+};
+
 export const useSubjects = () => useQuery({ queryKey: ['subjects'], queryFn: subjectApi.getAll });
 
 export const useWeeklySchedules = (date?: string) => 
