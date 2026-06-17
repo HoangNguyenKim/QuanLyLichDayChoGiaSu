@@ -51,7 +51,8 @@ export default {
         sans: ['Nunito', 'sans-serif'],
       },
       boxShadow: {
-        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+        'soft': '0 8px 30px -4px rgba(255, 143, 184, 0.25)',
+        'md-pink': '0 12px 40px -6px rgba(255, 143, 184, 0.35)',
       }
     },
   },

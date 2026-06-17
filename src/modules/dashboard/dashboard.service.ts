@@ -145,7 +145,7 @@ export class DashboardService {
     const startOfMonth = getStartOfMonth();
     const endOfMonth = getEndOfMonth();
 
-    const [weeklyAll, weeklyPaid, monthlyAll, monthlyPaid, totalAll, totalPaid] = await Promise.all([
+    const [weeklyAll, weeklyPaid, monthlyAll, monthlyPaid, totalAll, totalPaid, preparedLessons, notPreparedLessons] = await Promise.all([
       prisma.schedule.aggregate({
         where: { date: { gte: startOfWeek, lte: endOfWeek } },
         _sum: { estimatedIncome: true },
@@ -169,6 +169,12 @@ export class DashboardService {
         where: { isPaid: true },
         _sum: { actualIncome: true },
       }),
+      prisma.schedule.count({
+        where: { completed: false, lessonPrepared: true },
+      }),
+      prisma.schedule.count({
+        where: { completed: false, lessonPrepared: false },
+      }),
     ]);
 
     return {
@@ -184,6 +190,11 @@ export class DashboardService {
         actual: totalPaid._sum.actualIncome ?? 0,
         estimated: totalAll._sum.estimatedIncome ?? 0,
       },
+      lessons: {
+        prepared: preparedLessons,
+        notPrepared: notPreparedLessons,
+        total: preparedLessons + notPreparedLessons
+      }
     };
   }
 

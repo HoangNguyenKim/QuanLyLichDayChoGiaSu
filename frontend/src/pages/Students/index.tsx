@@ -4,27 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Ghost, Plus, MapPin, Phone, StickyNote, Baby, Building2, Loader2, Pencil, Trash2, Banknote } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-const createStudentSchema = z.object({
-  fullName: z.string().min(1, 'Họ tên không được để trống'),
-  grade: z.string().optional(),
-  address: z.string().optional(),
-  apartmentFloor: z.string().optional(),
-  parentPhone: z.string().optional(),
-  note: z.string().optional(),
-  tuitionFeePerSession: z.coerce.number().min(0, 'Giá tiền không được âm').optional(),
-  subjectIds: z.array(z.number()).optional(),
-});
-
-type CreateStudentFormValues = z.infer<typeof createStudentSchema>;
+import { StudentForm, type CreateStudentFormValues } from './StudentForm';
 
 const StudentsPage = () => {
   const { data: response, isLoading, error } = useStudents();
@@ -40,34 +21,11 @@ const StudentsPage = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [newSubjectName, setNewSubjectName] = useState('');
 
-  const form = useForm<CreateStudentFormValues>({
-    resolver: zodResolver(createStudentSchema),
-    defaultValues: {
-      fullName: '',
-      grade: '',
-      address: '',
-      apartmentFloor: '',
-      parentPhone: '',
-      note: '',
-      tuitionFeePerSession: 0,
-      subjectIds: [],
-    },
-  });
+
 
   const handleEditClick = (student: any) => {
     setSelectedStudent(student);
-    form.reset({
-      fullName: student.fullName,
-      grade: student.grade || '',
-      address: student.address || '',
-      apartmentFloor: student.apartmentFloor || '',
-      parentPhone: student.parentPhone || '',
-      note: student.note || '',
-      tuitionFeePerSession: student.tuitionFeePerSession || 0,
-      subjectIds: student.subjects?.map((s: any) => s.subjectId) || [],
-    });
     setIsEditDialogOpen(true);
   };
 
@@ -94,46 +52,38 @@ const StudentsPage = () => {
     });
   };
 
-  const onSubmit = (data: CreateStudentFormValues) => {
-    if (isEditDialogOpen && selectedStudent) {
-      updateStudent.mutate({ id: selectedStudent.id, data }, {
-        onSuccess: () => {
-          toast.success('Cập nhật thành công!');
-          setIsEditDialogOpen(false);
-          form.reset();
-        },
-        onError: (err: any) => toast.error(err.response?.data?.message || 'Có lỗi xảy ra.'),
-      });
-    } else {
-      createStudent.mutate(data, {
-        onSuccess: () => {
-          toast.success('Thêm học sinh thành công!');
-          setIsAddDialogOpen(false);
-          form.reset();
-        },
-        onError: (err: any) => toast.error(err.response?.data?.message || 'Có lỗi xảy ra.'),
-      });
-    }
+  const onAddSubmit = (data: CreateStudentFormValues) => {
+    createStudent.mutate(data, {
+      onSuccess: () => {
+        toast.success('Thêm học sinh thành công!');
+        setIsAddDialogOpen(false);
+      },
+      onError: (err: any) => toast.error(err.response?.data?.message || 'Có lỗi xảy ra.'),
+    });
   };
 
-  const handleAddSubject = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!newSubjectName.trim()) return;
-    createSubject.mutate({ name: newSubjectName }, {
+  const onEditSubmit = (data: CreateStudentFormValues) => {
+    if (!selectedStudent) return;
+    updateStudent.mutate({ id: selectedStudent.id, data }, {
       onSuccess: () => {
-        setNewSubjectName('');
-        toast.success('Thêm môn học thành công');
+        toast.success('Cập nhật thành công!');
+        setIsEditDialogOpen(false);
       },
-      onError: (err: any) => {
-        toast.error(err.response?.data?.message || 'Lỗi thêm môn học');
-      }
+      onError: (err: any) => toast.error(err.response?.data?.message || 'Có lỗi xảy ra.'),
+    });
+  };
+
+  const handleAddSubject = (name: string) => {
+    createSubject.mutate({ name }, {
+      onSuccess: () => toast.success('Thêm môn học thành công'),
+      onError: (err: any) => toast.error(err.response?.data?.message || 'Lỗi thêm môn học')
     });
   };
 
   return (
     <div className="p-4 md:p-8 space-y-6 pb-24 md:pb-8">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-primary-foreground">Danh sách học sinh</h1>
+        <h1 className="text-2xl font-bold text-foreground">Danh sách học sinh</h1>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl shadow-soft">
@@ -144,199 +94,18 @@ const StudentsPage = () => {
           </DialogTrigger>
           <DialogContent className="rounded-3xl border-primary/20 max-w-md w-[90vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-center text-xl text-primary-foreground">Thêm học sinh mới 🧸</DialogTitle>
+              <DialogTitle className="text-center text-xl text-foreground">Thêm học sinh mới 🧸</DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="fullName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Họ và tên *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nguyễn Văn A" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="grade"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Lớp</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Chọn lớp..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {[...Array(12)].map((_, i) => (
-                              <SelectItem key={i+1} value={`Lớp ${i+1}`}>Lớp {i+1}</SelectItem>
-                            ))}
-                            <SelectItem value="Đại học">Đại học</SelectItem>
-                            <SelectItem value="Người đi làm">Người đi làm</SelectItem>
-                            <SelectItem value="Khác">Khác</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Địa chỉ</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Số nhà, đường, phường..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="apartmentFloor"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tầng/Căn hộ</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Tầng 5, P502..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="parentPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SĐT Phụ huynh</FormLabel>
-                        <FormControl>
-                          <Input placeholder="0987..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="subjectIds"
-                  render={() => (
-                    <FormItem>
-                      <div className="mb-2">
-                        <FormLabel className="text-base">Môn học</FormLabel>
-                      </div>
-                      
-                      {subjects.length === 0 ? (
-                        <div className="text-sm text-muted-foreground mb-2 italic">
-                          Chưa có môn học nào. Hãy thêm môn học trước.
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-2 mb-4">
-                          {subjects.map((item) => (
-                            <FormField
-                              key={item.id}
-                              control={form.control}
-                              name="subjectIds"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem
-                                    key={item.id}
-                                    className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm"
-                                  >
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(item.id)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...(field.value || []), item.id])
-                                            : field.onChange(
-                                                field.value?.filter(
-                                                  (value) => value !== item.id
-                                                )
-                                              )
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal cursor-pointer text-sm">
-                                      {item.name}
-                                    </FormLabel>
-                                  </FormItem>
-                                )
-                              }}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="flex gap-2 items-center">
-                        <Input 
-                          placeholder="Nhập tên môn mới (VD: Toán 12)" 
-                          value={newSubjectName}
-                          onChange={(e) => setNewSubjectName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddSubject(e as any);
-                            }
-                          }}
-                        />
-                        <Button 
-                          type="button" 
-                          variant="secondary" 
-                          onClick={handleAddSubject}
-                          disabled={!newSubjectName.trim() || createSubject.isPending}
-                        >
-                          {createSubject.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Thêm môn"}
-                        </Button>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="tuitionFeePerSession"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Học phí 1 buổi (VNĐ)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="200000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="note"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ghi chú</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Thông tin thêm..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full rounded-2xl mt-4" disabled={createStudent.isPending}>
-                  {createStudent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Lưu học sinh
-                </Button>
-              </form>
-            </Form>
+            {isAddDialogOpen && (
+              <StudentForm
+                onSubmit={onAddSubmit}
+                isLoading={createStudent.isPending}
+                submitText="Lưu học sinh"
+                subjects={subjects}
+                onAddSubject={handleAddSubject}
+                isAddingSubject={createSubject.isPending}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -352,7 +121,7 @@ const StudentsPage = () => {
       ) : students.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 space-y-4 bg-white/50 rounded-3xl border border-dashed border-primary/30">
           <Ghost className="w-24 h-24 text-primary/40 animate-pulse" />
-          <h3 className="text-xl font-medium text-primary-foreground">Chưa có học sinh nào!</h3>
+          <h3 className="text-xl font-medium text-foreground">Chưa có học sinh nào!</h3>
           <p className="text-sm text-muted-foreground">Hãy thêm học sinh đầu tiên nhé 🌟</p>
         </div>
       ) : (
@@ -364,7 +133,7 @@ const StudentsPage = () => {
             return (
             <Card key={student.id} className="rounded-3xl shadow-soft border-primary/20 hover:shadow-md hover:border-primary/40 transition-all duration-300 bg-card overflow-hidden group flex flex-col">
               <CardHeader className="bg-secondary/20 pb-4 border-b border-primary/10 group-hover:bg-secondary/30 transition-colors">
-                <CardTitle className="flex items-center justify-between text-lg text-primary-foreground">
+                <CardTitle className="flex items-center justify-between text-lg text-foreground">
                   <div className="flex items-center gap-3">
                     <div className="bg-primary/20 p-2.5 rounded-2xl group-hover:bg-primary/30 transition-colors">
                       <Baby className="w-5 h-5 text-primary" />
@@ -462,167 +231,29 @@ const StudentsPage = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="rounded-3xl border-primary/20 max-w-md w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl text-primary-foreground">Sửa thông tin học sinh ✏️</DialogTitle>
+            <DialogTitle className="text-center text-xl text-foreground">Sửa thông tin học sinh ✏️</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            {/* Same form content but we use a ref or copy it. To keep it simple, we just render the form again or extract it.
-                Since extracting takes a lot of changes, we can just duplicate the form content here for now. */}
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Họ và tên *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nguyễn Văn A" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="grade"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Lớp</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Chọn lớp..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {[...Array(12)].map((_, i) => (
-                            <SelectItem key={i+1} value={`Lớp ${i+1}`}>Lớp {i+1}</SelectItem>
-                          ))}
-                          <SelectItem value="Đại học">Đại học</SelectItem>
-                          <SelectItem value="Người đi làm">Người đi làm</SelectItem>
-                          <SelectItem value="Khác">Khác</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="tuitionFeePerSession"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Học phí 1 buổi (VNĐ)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="200000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Địa chỉ</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Số nhà, đường, phường..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="apartmentFloor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tầng/Căn hộ</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Tầng 5, P502..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="parentPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SĐT Phụ huynh</FormLabel>
-                      <FormControl>
-                        <Input placeholder="0987..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="subjectIds"
-                render={() => (
-                  <FormItem>
-                    <div className="mb-2">
-                      <FormLabel className="text-base">Môn học</FormLabel>
-                    </div>
-                    {subjects.length === 0 ? (
-                      <div className="text-sm text-muted-foreground mb-2 italic">
-                        Chưa có môn học nào.
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                        {subjects.map((item) => (
-                          <FormField
-                            key={item.id}
-                            control={form.control}
-                            name="subjectIds"
-                            render={({ field }) => (
-                              <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 shadow-sm">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(item.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), item.id])
-                                        : field.onChange(field.value?.filter((val) => val !== item.id))
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal cursor-pointer text-sm">{item.name}</FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="note"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ghi chú</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Thông tin thêm..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full rounded-2xl mt-4" disabled={updateStudent.isPending}>
-                {updateStudent.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Lưu thay đổi
-              </Button>
-            </form>
-          </Form>
+          {isEditDialogOpen && selectedStudent && (
+            <StudentForm
+              key={selectedStudent.id}
+              defaultValues={{
+                fullName: selectedStudent.fullName,
+                grade: selectedStudent.grade || '',
+                address: selectedStudent.address || '',
+                apartmentFloor: selectedStudent.apartmentFloor || '',
+                parentPhone: selectedStudent.parentPhone || '',
+                note: selectedStudent.note || '',
+                tuitionFeePerSession: selectedStudent.tuitionFeePerSession || 0,
+                subjectIds: selectedStudent.subjects?.map((s: any) => s.subjectId) || [],
+              }}
+              onSubmit={onEditSubmit}
+              isLoading={updateStudent.isPending}
+              submitText="Lưu thay đổi"
+              subjects={subjects}
+              onAddSubject={handleAddSubject}
+              isAddingSubject={createSubject.isPending}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

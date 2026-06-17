@@ -126,16 +126,31 @@ export class StudentRepository {
   }
 
   async markPaid(studentId: number) {
-    return prisma.schedule.updateMany({
+    const schedulesToUpdate = await prisma.schedule.findMany({
       where: {
         studentId,
         completed: true,
         isPaid: false,
       },
-      data: {
-        isPaid: true,
-      },
     });
+
+    if (schedulesToUpdate.length === 0) {
+      return { count: 0 };
+    }
+
+    const updatedSchedules = await prisma.$transaction(
+      schedulesToUpdate.map((schedule) =>
+        prisma.schedule.update({
+          where: { id: schedule.id },
+          data: {
+            isPaid: true,
+            actualIncome: schedule.estimatedIncome,
+          },
+        })
+      )
+    );
+
+    return { count: updatedSchedules.length };
   }
 }
 

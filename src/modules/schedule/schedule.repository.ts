@@ -132,10 +132,15 @@ export class ScheduleRepository {
   async create(data: CreateScheduleDto) {
     const { date, ...rest } = data;
 
+    const student = await prisma.student.findUnique({
+      where: { id: data.studentId },
+    });
+
     return prisma.schedule.create({
       data: {
         ...rest,
         date: new Date(date),
+        estimatedIncome: data.estimatedIncome ?? student?.tuitionFeePerSession ?? 0,
       },
       include: {
         student: true,

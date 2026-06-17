@@ -37,7 +37,10 @@ export const useMarkPaid = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: studentApi.markPaid,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['students'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 };
 
@@ -58,7 +61,10 @@ export const useCreateSchedule = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: scheduleApi.create,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['schedules'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 };
 
@@ -66,7 +72,10 @@ export const useUpdateSchedule = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => scheduleApi.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['schedules'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 };
 

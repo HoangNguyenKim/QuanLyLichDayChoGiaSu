@@ -5,36 +5,42 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 240 10% 20%;
+    /* Background: #FFF0F6 */
+    --background: 336 100% 97%;
+    /* Text main: #444444 */
+    --foreground: 0 0% 27%;
 
+    /* Card: #FFFFFF */
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 20%;
+    --card-foreground: 0 0% 27%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 20%;
+    --popover-foreground: 0 0% 27%;
 
-    /* Pastel Pink for primary */
-    --primary: 346 100% 91%;
-    --primary-foreground: 346 50% 30%;
+    /* Primary: #FF8FB8 */
+    --primary: 338 100% 78%;
+    --primary-foreground: 0 0% 100%; /* White text on primary button */
 
-    /* Pastel Yellow for secondary */
-    --secondary: 51 100% 85%;
-    --secondary-foreground: 51 50% 30%;
+    /* Secondary: #FFB7D5 */
+    --secondary: 335 100% 86%;
+    --secondary-foreground: 0 0% 27%; /* Dark text on secondary */
 
-    /* Pastel Blue for accent */
-    --accent: 209 100% 87%;
-    --accent-foreground: 209 50% 30%;
+    /* Accent: #FFE28A */
+    --accent: 45 100% 77%;
+    --accent-foreground: 0 0% 27%;
 
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 5% 45%;
+    /* Mint nhạt: #BFF3E4 */
+    --muted: 163 68% 85%;
+    /* Text phụ: #777777 */
+    --muted-foreground: 0 0% 47%;
 
-    --destructive: 0 84% 85%;
-    --destructive-foreground: 0 50% 30%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 10% 90%;
-    --input: 240 10% 90%;
-    --ring: 346 100% 91%;
+    /* Border slightly visible to define shapes */
+    --border: 335 50% 90%;
+    --input: 335 50% 90%;
+    --ring: 338 100% 78%;
 
     --radius: 1.5rem;
   }
@@ -76,5 +82,7 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
+    background-image: radial-gradient(hsl(var(--primary) / 0.15) 2px, transparent 2px);
+    background-size: 24px 24px;
   }
 }

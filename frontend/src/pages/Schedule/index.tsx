@@ -319,7 +319,7 @@ const SchedulePage = () => {
     <div className="p-4 md:p-6 w-full max-w-screen-2xl mx-auto flex flex-col md:flex-row gap-6 animate-in fade-in zoom-in-95 duration-300">
       
       {/* Sidebar for Students */}
-      <div className="w-full md:w-72 bg-white rounded-3xl p-5 shadow-soft border border-pink-100 flex-shrink-0 flex flex-col max-h-[85vh]">
+      <div className="w-full md:w-72 bg-white rounded-3xl p-5 shadow-soft border border-pink-100 flex-shrink-0 flex flex-col max-h-[85vh] md:sticky md:top-6 z-10">
         <h2 className="text-xl font-bold text-pink-800 mb-2 flex items-center gap-2">
           🧸 Học sinh
         </h2>
@@ -397,7 +397,7 @@ const SchedulePage = () => {
       }}>
         <DialogContent className="rounded-3xl border-primary/20 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-xl text-primary-foreground text-center">
+            <DialogTitle className="text-xl text-foreground text-center">
               {isEditMode ? `Cập nhật nội dung: ${pendingSchedule?.studentName}` : `Xếp lịch cho ${pendingSchedule?.studentName}`}
             </DialogTitle>
           </DialogHeader>

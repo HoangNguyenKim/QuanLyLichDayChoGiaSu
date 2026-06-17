@@ -13,15 +13,15 @@ export default function TodayWorkflowCard() {
   if (isLoading) return <div>Đang tải lịch hôm nay...</div>;
 
   return (
-    <Card className="shadow-sm border-border">
-      <CardHeader className="bg-primary/5 pb-4">
-        <CardTitle className="text-xl font-bold flex items-center gap-2">
-          Hôm nay <span className="text-sm font-normal text-muted-foreground">({schedules.length} ca)</span>
+    <Card className="bg-card shadow-md-pink hover:shadow-lg transition-shadow duration-300 border-2 border-primary/30 rounded-3xl overflow-hidden">
+      <CardHeader className="bg-primary/10 border-b border-primary/20 pb-4">
+        <CardTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
+          Hôm nay <span className="text-sm font-semibold text-primary">({schedules.length} ca)</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {schedules.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">Bạn không có ca dạy nào hôm nay.</div>
+          <div className="p-10 text-center text-muted-foreground font-medium">Bạn không có ca dạy nào hôm nay. 🎉</div>
         ) : (
           <div className="divide-y divide-border">
             {schedules.map((s: any) => {
