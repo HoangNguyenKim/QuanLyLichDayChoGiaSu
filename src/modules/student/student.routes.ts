@@ -289,4 +289,24 @@ router.put('/:id', validateRequest(updateStudentSchema), studentController.updat
  */
 router.delete('/:id', studentController.delete);
 
+/**
+ * @swagger
+ * /api/students/{id}/mark-paid:
+ *   post:
+ *     summary: Đánh dấu đã thu tiền
+ *     description: Đánh dấu tất cả các buổi học đã hoàn thành nhưng chưa thu tiền của học sinh thành đã thu tiền
+ *     tags: [Students]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID của học sinh
+ *     responses:
+ *       200:
+ *         description: Thành công
+ */
+router.post('/:id/mark-paid', studentController.markPaid);
+
 export default router;

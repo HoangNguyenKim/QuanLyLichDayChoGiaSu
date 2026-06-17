@@ -6,6 +6,7 @@ export const createStudentSchema = z.object({
   apartmentFloor: z.string().optional(),
   parentPhone: z.string().optional(),
   note: z.string().optional(),
+  tuitionFeePerSession: z.number().min(0).optional(),
   subjectIds: z.array(z.number().int().positive()).optional(),
 });
 
@@ -15,6 +16,7 @@ export const updateStudentSchema = z.object({
   apartmentFloor: z.string().optional(),
   parentPhone: z.string().optional(),
   note: z.string().optional(),
+  tuitionFeePerSession: z.number().min(0).optional(),
   subjectIds: z.array(z.number().int().positive()).optional(),
 });
 

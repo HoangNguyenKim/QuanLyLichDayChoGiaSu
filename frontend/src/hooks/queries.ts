@@ -17,8 +17,39 @@ export const useCreateStudent = () => {
   });
 };
 
+export const useUpdateStudent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => studentApi.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['students'] }),
+  });
+};
+
+export const useDeleteStudent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: studentApi.delete,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['students'] }),
+  });
+};
+
+export const useMarkPaid = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: studentApi.markPaid,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['students'] }),
+  });
+};
+
 export const useSubjects = () => useQuery({ queryKey: ['subjects'], queryFn: subjectApi.getAll });
 
+export const useCreateSubject = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: subjectApi.create,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subjects'] }),
+  });
+};
 export const useWeeklySchedules = (date?: string) => 
   useQuery({ queryKey: ['schedules', 'weekly', date], queryFn: () => scheduleApi.getWeekly(date) });
 

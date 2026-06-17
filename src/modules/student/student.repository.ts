@@ -21,6 +21,12 @@ export class StudentRepository {
               subject: true,
             },
           },
+          schedules: {
+            where: {
+              completed: true,
+              isPaid: false,
+            },
+          },
         },
         skip,
         take: params.limit,
@@ -116,6 +122,19 @@ export class StudentRepository {
   async delete(id: number) {
     return prisma.student.delete({
       where: { id },
+    });
+  }
+
+  async markPaid(studentId: number) {
+    return prisma.schedule.updateMany({
+      where: {
+        studentId,
+        completed: true,
+        isPaid: false,
+      },
+      data: {
+        isPaid: true,
+      },
     });
   }
 }

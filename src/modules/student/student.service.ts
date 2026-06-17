@@ -31,6 +31,11 @@ export class StudentService {
     await this.getById(id);
     return this.repository.delete(id);
   }
+
+  async markPaid(id: number) {
+    await this.getById(id);
+    return this.repository.markPaid(id);
+  }
 }
 
 export const studentService = new StudentService(studentRepository);

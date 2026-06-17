@@ -55,6 +55,16 @@ export class StudentController {
       next(error);
     }
   };
+
+  markPaid = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const result = await this.service.markPaid(id);
+      res.json(successResponse({ message: 'Đã thu tiền thành công', count: result.count }));
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const studentController = new StudentController(studentService);

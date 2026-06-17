@@ -1,21 +1,63 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import interactionPlugin from '@fullcalendar/interaction';
-import type { EventContentArg, EventDropArg } from '@fullcalendar/core';
+import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
+import type { EventContentArg, EventDropArg, EventReceiveArg } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 import { format } from 'date-fns';
-import { useWeeklySchedules, useUpdateSchedule } from '../../hooks/queries';
-import { Monitor, MapPin, CheckCircle2 } from 'lucide-react';
+import { useWeeklySchedules, useUpdateSchedule, useStudents, useCreateSchedule } from '../../hooks/queries';
+import { Monitor, MapPin, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import './schedule.css';
 
 const SchedulePage = () => {
   const calendarRef = useRef<FullCalendar>(null);
+  const externalEventsRef = useRef<HTMLDivElement>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   
   const { data: response } = useWeeklySchedules(format(currentDate, 'yyyy-MM-dd'));
+  const { data: studentsResponse, isLoading: isLoadingStudents } = useStudents();
+  const students = studentsResponse?.data || [];
+  
   const { mutateAsync: updateSchedule } = useUpdateSchedule();
+  const { mutateAsync: createSchedule } = useCreateSchedule();
+
+  const [pendingSchedule, setPendingSchedule] = useState<any>(null);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number>(0);
+  const [lessonPrepared, setLessonPrepared] = useState<boolean>(false);
+  const [teachingNote, setTeachingNote] = useState<string>('');
+
+  useEffect(() => {
+    let draggable: Draggable | null = null;
+    if (externalEventsRef.current) {
+      draggable = new Draggable(externalEventsRef.current, {
+        itemSelector: '.fc-event',
+        eventData: function(eventEl) {
+          const id = eventEl.getAttribute('data-id');
+          const title = eventEl.getAttribute('data-title');
+          const subjectId = eventEl.getAttribute('data-subject-id');
+          return {
+            title: title,
+            create: true,
+            extendedProps: {
+              studentId: Number(id),
+              subjectId: Number(subjectId),
+              studentName: title
+            }
+          };
+        }
+      });
+    }
+    return () => {
+      draggable?.destroy();
+    };
+  }, []);
 
   const events = response?.data?.map((schedule) => {
     return {
@@ -28,6 +70,7 @@ const SchedulePage = () => {
         mode: schedule.mode,
         lessonPrepared: schedule.lessonPrepared,
         completed: schedule.completed,
+        teachingNote: schedule.teachingNote,
       },
     };
   }) || [];
@@ -86,6 +129,99 @@ const SchedulePage = () => {
     }
   };
 
+  const handleEventReceive = async (info: EventReceiveArg) => {
+    const { event } = info;
+    const studentId = event.extendedProps.studentId;
+    
+    const student = students.find((s: any) => s.id === studentId);
+    
+    if (!student || !student.subjects || student.subjects.length === 0) {
+      toast.error('Học sinh này chưa được gán môn học!');
+      event.remove();
+      return;
+    }
+
+    const newDate = format(event.start!, 'yyyy-MM-dd');
+    const newStartTime = format(event.start!, 'HH:mm');
+    
+    let newEndTime;
+    if (event.end) {
+      newEndTime = format(event.end, 'HH:mm');
+    } else {
+      const defaultEndDate = new Date(event.start!);
+      defaultEndDate.setHours(defaultEndDate.getHours() + 2);
+      newEndTime = format(defaultEndDate, 'HH:mm');
+    }
+
+    setPendingSchedule({
+      studentId,
+      studentName: student.fullName,
+      subjects: student.subjects.map((s: any) => s.subject),
+      date: newDate,
+      startTime: newStartTime,
+      endTime: newEndTime,
+      fcEvent: event,
+    });
+    setSelectedSubjectId(student.subjects[0].subjectId);
+    setTeachingNote('');
+    setLessonPrepared(false);
+    setIsEditMode(false);
+    setIsScheduleDialogOpen(true);
+  };
+
+  const handleEventClick = (info: any) => {
+    const { event } = info;
+    setPendingSchedule({
+      id: Number(event.id),
+      studentName: event.extendedProps.studentName,
+      fcEvent: event, // for reference
+    });
+    setTeachingNote(event.extendedProps.teachingNote || '');
+    setLessonPrepared(event.extendedProps.lessonPrepared || false);
+    setIsEditMode(true);
+    setIsScheduleDialogOpen(true);
+  };
+
+  const handleConfirmSchedule = async () => {
+    if (!pendingSchedule) return;
+
+    try {
+      if (isEditMode) {
+        await updateSchedule({
+          id: pendingSchedule.id,
+          data: {
+            teachingNote,
+            lessonPrepared,
+          }
+        });
+        toast.success('Cập nhật nội dung thành công!');
+      } else {
+        const res = await createSchedule({
+          studentId: pendingSchedule.studentId,
+          subjectId: selectedSubjectId,
+          date: pendingSchedule.date,
+          startTime: pendingSchedule.startTime,
+          endTime: pendingSchedule.endTime,
+          teachingNote,
+          lessonPrepared,
+          mode: 'OFFLINE',
+        });
+
+        if (res?.warning) {
+          toast.warning(res.warningMessage || 'Đã xếp lịch nhưng có cảnh báo trùng giờ');
+        } else {
+          toast.success('Xếp lịch thành công!');
+        }
+        pendingSchedule.fcEvent.remove();
+      }
+      
+      setIsScheduleDialogOpen(false);
+      setPendingSchedule(null);
+    } catch (error: any) {
+      toast.error(error?.message || 'Lỗi khi lưu ca học');
+    }
+  };
+
   const renderEventContent = (eventInfo: EventContentArg) => {
     const { studentName, subjectName, mode, lessonPrepared, completed } = eventInfo.event.extendedProps;
     
@@ -132,15 +268,48 @@ const SchedulePage = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 w-full max-w-7xl mx-auto flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-300">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl md:text-3xl font-bold text-pink-800 flex items-center gap-2">
-          📅 Weekly Schedule
-        </h1>
-      </div>
+    <div className="p-4 md:p-6 w-full max-w-screen-2xl mx-auto flex flex-col md:flex-row gap-6 animate-in fade-in zoom-in-95 duration-300">
       
-      <div className="bg-white rounded-3xl p-4 md:p-6 shadow-soft border border-pink-100">
-        <FullCalendar
+      {/* Sidebar for Students */}
+      <div className="w-full md:w-72 bg-white rounded-3xl p-5 shadow-soft border border-pink-100 flex-shrink-0 flex flex-col max-h-[85vh]">
+        <h2 className="text-xl font-bold text-pink-800 mb-2 flex items-center gap-2">
+          🧸 Học sinh
+        </h2>
+        <p className="text-sm text-slate-500 mb-4 pb-4 border-b border-pink-50">
+          Kéo học sinh và thả vào lịch để xếp lịch dạy nhanh chóng.
+        </p>
+        <div ref={externalEventsRef} className="flex-1 overflow-y-auto flex flex-col gap-3 pr-2 scrollbar-thin">
+          {isLoadingStudents ? (
+            <div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          ) : students.length === 0 ? (
+            <div className="text-sm text-slate-400 italic text-center py-4">Chưa có học sinh</div>
+          ) : students.map(student => (
+            <div 
+              key={student.id}
+              className="fc-event p-3.5 bg-gradient-to-br from-pastel-blue to-blue-50 text-blue-900 rounded-2xl cursor-grab active:cursor-grabbing border border-blue-200/60 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
+              data-id={student.id}
+              data-title={student.fullName}
+              data-subject-id={student.subjects?.[0]?.subjectId || 0}
+            >
+              <div className="font-semibold text-sm truncate">{student.fullName}</div>
+              <div className="text-xs text-blue-600/80 mt-1 flex items-center gap-1 truncate">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                {student.subjects?.[0]?.subject?.name || 'Chưa gán môn'}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex items-center justify-between mb-4 pl-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-pink-800 flex items-center gap-2">
+            📅 Lịch Dạy Của Bạn
+          </h1>
+        </div>
+        
+        <div className="bg-white rounded-3xl p-4 md:p-6 shadow-soft border border-pink-100 flex-1">
+          <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
@@ -154,6 +323,8 @@ const SchedulePage = () => {
           droppable={true}
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
+          eventReceive={handleEventReceive}
+          eventClick={handleEventClick}
           eventContent={renderEventContent}
           allDaySlot={false}
           slotMinTime="06:00:00"
@@ -163,7 +334,77 @@ const SchedulePage = () => {
           nowIndicator={true}
           datesSet={(arg) => setCurrentDate(arg.view.currentStart)}
         />
+        </div>
       </div>
+
+      <Dialog open={isScheduleDialogOpen} onOpenChange={(open) => {
+        if (!open && pendingSchedule && !isEditMode) {
+           pendingSchedule.fcEvent.remove();
+        }
+        if (!open) {
+           setPendingSchedule(null);
+        }
+        setIsScheduleDialogOpen(open);
+      }}>
+        <DialogContent className="rounded-3xl border-primary/20 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-primary-foreground text-center">
+              {isEditMode ? `Cập nhật nội dung: ${pendingSchedule?.studentName}` : `Xếp lịch cho ${pendingSchedule?.studentName}`}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {!isEditMode && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Môn học (Bắt buộc)</label>
+                <select 
+                  className="w-full p-3 border border-primary/20 rounded-xl bg-transparent outline-none focus:ring-2 focus:ring-primary/50"
+                  value={selectedSubjectId}
+                  onChange={(e) => setSelectedSubjectId(Number(e.target.value))}
+                >
+                  {pendingSchedule?.subjects?.map((subject: any) => (
+                    <option key={subject.id} value={subject.id}>{subject.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Ghi chú môn học buổi đó</label>
+              <Input 
+                placeholder="VD: Ôn tập toán hình..." 
+                value={teachingNote}
+                onChange={(e) => setTeachingNote(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex items-center space-x-3 bg-secondary/10 p-3 rounded-xl">
+              <Checkbox 
+                id="prepared" 
+                checked={lessonPrepared}
+                onCheckedChange={(checked) => setLessonPrepared(checked as boolean)}
+              />
+              <label htmlFor="prepared" className="text-sm font-medium leading-none cursor-pointer">
+                Đã soạn bài cho buổi này
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="outline" className="rounded-xl" onClick={() => {
+              if (!isEditMode) {
+                pendingSchedule?.fcEvent.remove();
+              }
+              setPendingSchedule(null);
+              setIsScheduleDialogOpen(false);
+            }}>
+              Hủy
+            </Button>
+            <Button className="rounded-xl" disabled={updateSchedule.isPending || createSchedule.isPending} onClick={handleConfirmSchedule}>
+              {(updateSchedule.isPending || createSchedule.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isEditMode ? 'Lưu cập nhật' : 'Lưu ca học'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

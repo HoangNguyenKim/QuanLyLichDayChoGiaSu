@@ -17,6 +17,7 @@ export const studentApi = {
   create: (data: Partial<Student> & { subjectIds?: number[] }) => axiosClient.post<any, ApiResponse<Student>>('/students', data),
   update: (id: number, data: Partial<Student> & { subjectIds?: number[] }) => axiosClient.put<any, ApiResponse<Student>>(`/students/${id}`, data),
   delete: (id: number) => axiosClient.delete<any, ApiResponse<void>>(`/students/${id}`),
+  markPaid: (id: number) => axiosClient.post<any, ApiResponse<any>>(`/students/${id}/mark-paid`),
 };
 
 export const subjectApi = {

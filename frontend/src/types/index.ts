@@ -4,9 +4,12 @@ export interface Student {
   address?: string;
   apartmentFloor?: string;
   parentPhone?: string;
+  parentPhone?: string;
   note?: string;
+  tuitionFeePerSession?: number;
   createdAt?: string;
   updatedAt?: string;
+  schedules?: Schedule[];
   subjects?: Subject[];
 }
 
@@ -28,6 +31,7 @@ export interface Schedule {
   note?: string;
   lessonPrepared: boolean;
   completed: boolean;
+  isPaid: boolean;
   estimatedIncome?: number;
   actualIncome?: number;
   teachingNote?: string;
