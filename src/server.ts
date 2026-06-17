@@ -1,8 +1,10 @@
 import app from './app';
 import { config } from './config';
+import { notificationService } from './modules/notification/notification.service';
 
 const start = async () => {
   try {
+    notificationService.startCronJob();
     app.listen(config.port, () => {
       console.log(`🚀 Server running on http://localhost:${config.port}`);
       console.log(`📚 Swagger docs: http://localhost:${config.port}/api-docs`);

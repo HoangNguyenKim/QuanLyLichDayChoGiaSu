@@ -512,4 +512,16 @@ router.patch('/:id/complete', scheduleController.markCompleted);
  */
 router.patch('/:id/lesson-prepared', scheduleController.markLessonPrepared);
 
+/**
+ * @swagger
+ * /api/schedules/check-conflict:
+ *   post:
+ *     summary: Kiểm tra trùng lịch hoặc khoảng cách lịch
+ *     tags: [Schedules]
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+router.post('/check-conflict', scheduleController.checkConflict);
+
 export default router;

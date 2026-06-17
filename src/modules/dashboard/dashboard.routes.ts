@@ -215,4 +215,28 @@ router.get('/income/weekly', dashboardController.getWeeklyIncome);
  */
 router.get('/income/monthly', dashboardController.getMonthlyIncome);
 
+/**
+ * @swagger
+ * /api/dashboard/income/stats:
+ *   get:
+ *     summary: Thống kê thu nhập (Tuần, Tháng, Tổng)
+ *     tags: [Dashboard]
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+router.get('/income/stats', dashboardController.getIncomeStats);
+
+/**
+ * @swagger
+ * /api/dashboard/todos:
+ *   get:
+ *     summary: Lấy danh sách việc cần làm hôm nay
+ *     tags: [Dashboard]
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+router.get('/todos', dashboardController.getTodayTodos);
+
 export default router;

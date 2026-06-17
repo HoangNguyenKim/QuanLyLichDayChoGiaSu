@@ -58,6 +58,9 @@ model Schedule {
   estimatedIncome Float?       @default(0)
   actualIncome    Float?       @default(0)
   teachingNote    String?
+  notified30Min   Boolean      @default(false)
+  notified1Hour   Boolean      @default(false)
+  notified1Day    Boolean      @default(false)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   student         Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)

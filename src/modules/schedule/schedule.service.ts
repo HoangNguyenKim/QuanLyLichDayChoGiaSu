@@ -66,20 +66,35 @@ export class ScheduleService {
       data.endTime,
     );
 
+    const closeSchedules = await this.repository.findCloseSchedules(
+      scheduleDate,
+      data.startTime,
+      data.endTime,
+    );
+
     const schedule = await this.repository.create(data);
 
     if (conflicts.length > 0) {
       const conflictDetails = conflicts
-        .map(
-          (c) =>
-            `${c.student.fullName} - ${c.subject.name} (${c.startTime}-${c.endTime})`,
-        )
+        .map((c) => `${c.student.fullName} - ${c.subject.name} (${c.startTime}-${c.endTime})`)
         .join(', ');
 
       return {
         schedule,
         warning: true,
         warningMessage: `Bạn có lịch trùng giờ với: ${conflictDetails}`,
+      };
+    }
+
+    if (closeSchedules.length > 0) {
+      const closeDetails = closeSchedules
+        .map((c) => `${c.student.fullName} - ${c.subject.name} (${c.startTime}-${c.endTime})`)
+        .join(', ');
+
+      return {
+        schedule,
+        warning: true,
+        warningMessage: `Có thể không đủ thời gian di chuyển với lịch: ${closeDetails}`,
       };
     }
 
@@ -90,6 +105,7 @@ export class ScheduleService {
     const existing = await this.getById(id);
 
     let conflicts: any[] = [];
+    let closeSchedules: any[] = [];
 
     const dateChanged = data.date !== undefined;
     const timeChanged = data.startTime !== undefined || data.endTime !== undefined;
@@ -105,22 +121,38 @@ export class ScheduleService {
         checkEndTime,
         id,
       );
+
+      closeSchedules = await this.repository.findCloseSchedules(
+        checkDate instanceof Date ? checkDate : parseDate(checkDate as string),
+        checkStartTime,
+        checkEndTime,
+        id,
+      );
     }
 
     const schedule = await this.repository.update(id, data);
 
     if (conflicts.length > 0) {
       const conflictDetails = conflicts
-        .map(
-          (c) =>
-            `${c.student.fullName} - ${c.subject.name} (${c.startTime}-${c.endTime})`,
-        )
+        .map((c) => `${c.student.fullName} - ${c.subject.name} (${c.startTime}-${c.endTime})`)
         .join(', ');
 
       return {
         schedule,
         warning: true,
         warningMessage: `Bạn có lịch trùng giờ với: ${conflictDetails}`,
+      };
+    }
+
+    if (closeSchedules && closeSchedules.length > 0) {
+      const closeDetails = closeSchedules
+        .map((c) => `${c.student.fullName} - ${c.subject.name} (${c.startTime}-${c.endTime})`)
+        .join(', ');
+
+      return {
+        schedule,
+        warning: true,
+        warningMessage: `Có thể không đủ thời gian di chuyển với lịch: ${closeDetails}`,
       };
     }
 
@@ -140,6 +172,23 @@ export class ScheduleService {
   async markLessonPrepared(id: number) {
     const existing = await this.getById(id);
     return this.repository.markLessonPrepared(id, !existing.lessonPrepared);
+  }
+
+  async checkConflict(dateString: string, startTime: string, endTime: string, excludeId?: number) {
+    const scheduleDate = parseDate(dateString);
+    const conflicts = await this.repository.findConflicting(scheduleDate, startTime, endTime, excludeId);
+    if (conflicts.length > 0) {
+      const details = conflicts.map(c => `${c.student.fullName} (${c.startTime}-${c.endTime})`).join(', ');
+      return { hasWarning: true, message: `Bạn có lịch trùng giờ với: ${details}`, type: 'overlap' };
+    }
+
+    const closeSchedules = await this.repository.findCloseSchedules(scheduleDate, startTime, endTime, excludeId);
+    if (closeSchedules.length > 0) {
+      const details = closeSchedules.map(c => `${c.student.fullName} (${c.startTime}-${c.endTime})`).join(', ');
+      return { hasWarning: true, message: `Có thể không đủ thời gian di chuyển với lịch: ${details}`, type: 'close' };
+    }
+
+    return { hasWarning: false };
   }
 }
 

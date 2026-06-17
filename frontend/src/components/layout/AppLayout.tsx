@@ -1,8 +1,11 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
+import { useNotification } from '@/hooks/useNotification';
 
 export default function AppLayout() {
+  useNotification();
+  
   return (
     <div className="flex h-screen w-full bg-secondary/20 font-sans overflow-hidden">
       <Sidebar />

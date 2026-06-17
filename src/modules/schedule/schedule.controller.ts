@@ -125,6 +125,16 @@ export class ScheduleController {
       next(error);
     }
   };
+
+  checkConflict = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { date, startTime, endTime, excludeId } = req.body;
+      const result = await this.service.checkConflict(date, startTime, endTime, excludeId ? parseInt(excludeId, 10) : undefined);
+      res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const scheduleController = new ScheduleController(scheduleService);

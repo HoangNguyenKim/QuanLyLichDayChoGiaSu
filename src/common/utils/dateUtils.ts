@@ -64,3 +64,21 @@ export function isTimeOverlapping(
   const e2 = timeToMinutes(end2);
   return s1 < e2 && s2 < e1;
 }
+
+export function isTimeClose(
+  start1: string,
+  end1: string,
+  start2: string,
+  end2: string,
+  thresholdMinutes = 15
+): boolean {
+  const s1 = timeToMinutes(start1);
+  const e1 = timeToMinutes(end1);
+  const s2 = timeToMinutes(start2);
+  const e2 = timeToMinutes(end2);
+  
+  const gap1 = s2 - e1;
+  const gap2 = s1 - e2;
+  
+  return (gap1 >= 0 && gap1 < thresholdMinutes) || (gap2 >= 0 && gap2 < thresholdMinutes);
+}

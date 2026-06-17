@@ -57,6 +57,32 @@ export class DashboardController {
       next(error);
     }
   };
+
+  /**
+   * GET /api/dashboard/income/stats
+   * Get all income stats (weekly, monthly, total)
+   */
+  getIncomeStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.getIncomeStats();
+      res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * GET /api/dashboard/todos
+   * Get today's to-do list
+   */
+  getTodayTodos = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.service.getTodayTodos();
+      res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const dashboardController = new DashboardController(dashboardService);

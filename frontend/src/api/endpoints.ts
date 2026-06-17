@@ -6,6 +6,8 @@ export const dashboardApi = {
   getUpcoming: (days: number = 7) => axiosClient.get<any, ApiResponse<Schedule[]>>(`/dashboard/upcoming?days=${days}`),
   getWeeklyIncome: () => axiosClient.get<any, ApiResponse<IncomeStats>>('/dashboard/income/weekly'),
   getMonthlyIncome: () => axiosClient.get<any, ApiResponse<IncomeStats>>('/dashboard/income/monthly'),
+  getIncomeStats: () => axiosClient.get<any, ApiResponse<any>>('/dashboard/income/stats'),
+  getTodos: () => axiosClient.get<any, ApiResponse<any>>('/dashboard/todos'),
 };
 
 export const studentApi = {
@@ -32,4 +34,6 @@ export const scheduleApi = {
   delete: (id: number) => axiosClient.delete<any, ApiResponse<void>>(`/schedules/${id}`),
   markCompleted: (id: number) => axiosClient.patch<any, ApiResponse<Schedule>>(`/schedules/${id}/complete`),
   markLessonPrepared: (id: number) => axiosClient.patch<any, ApiResponse<Schedule>>(`/schedules/${id}/lesson-prepared`),
+  checkConflict: (data: { date: string, startTime: string, endTime: string, excludeId?: number }) => 
+    axiosClient.post<any, ApiResponse<any>>('/schedules/check-conflict', data),
 };

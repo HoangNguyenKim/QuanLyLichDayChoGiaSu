@@ -134,6 +134,66 @@ export class DashboardService {
       year: now.getFullYear(),
     };
   }
+
+  /**
+   * Get income stats: weekly, monthly, and total
+   */
+  async getIncomeStats() {
+    const startOfWeek = getStartOfWeek();
+    const endOfWeek = getEndOfWeek();
+    const startOfMonth = getStartOfMonth();
+    const endOfMonth = getEndOfMonth();
+
+    const [weeklyResult, monthlyResult, totalResult] = await Promise.all([
+      prisma.schedule.aggregate({
+        where: { completed: true, date: { gte: startOfWeek, lte: endOfWeek } },
+        _sum: { actualIncome: true, estimatedIncome: true },
+      }),
+      prisma.schedule.aggregate({
+        where: { completed: true, date: { gte: startOfMonth, lte: endOfMonth } },
+        _sum: { actualIncome: true, estimatedIncome: true },
+      }),
+      prisma.schedule.aggregate({
+        where: { completed: true },
+        _sum: { actualIncome: true, estimatedIncome: true },
+      }),
+    ]);
+
+    return {
+      weekly: {
+        actual: weeklyResult._sum.actualIncome ?? 0,
+        estimated: weeklyResult._sum.estimatedIncome ?? 0,
+      },
+      monthly: {
+        actual: monthlyResult._sum.actualIncome ?? 0,
+        estimated: monthlyResult._sum.estimatedIncome ?? 0,
+      },
+      total: {
+        actual: totalResult._sum.actualIncome ?? 0,
+        estimated: totalResult._sum.estimatedIncome ?? 0,
+      },
+    };
+  }
+
+  /**
+   * Get today's to-do list (formatting schedules as tasks)
+   */
+  async getTodayTodos() {
+    const todayData = await this.getTodaySchedules();
+    const todos = todayData.schedules.map(schedule => {
+      const isPrepared = schedule.lessonPrepared;
+      const title = `${schedule.startTime} dạy ${schedule.subject.name} cho ${schedule.student.fullName}`;
+      return {
+        id: schedule.id,
+        scheduleId: schedule.id,
+        title,
+        status: isPrepared ? 'Đã soạn bài' : 'Chưa soạn bài',
+        isPrepared,
+        completed: schedule.completed
+      };
+    });
+    return todos;
+  }
 }
 
 export const dashboardService = new DashboardService();

@@ -3,11 +3,11 @@ import { motion } from 'framer-motion';
 import { 
   useDashboardToday, 
   useDashboardUpcoming, 
-  useWeeklyIncome, 
-  useMonthlyIncome 
+  useIncomeStats
 } from '@/hooks/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, DollarSign, BookOpen, MapPin, Flame } from 'lucide-react';
+import { Calendar, DollarSign, BookOpen, MapPin, Flame, Briefcase } from 'lucide-react';
+import TodayWorkflowCard from '@/components/schedule/TodayWorkflowCard';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale/vi';
 
@@ -33,13 +33,11 @@ const itemVariants: any = {
 export default function Dashboard() {
   const { data: todayResp, isLoading: isLoadingToday } = useDashboardToday();
   const { data: upcomingResp, isLoading: isLoadingUpcoming } = useDashboardUpcoming(7);
-  const { data: weeklyIncomeResp } = useWeeklyIncome();
-  const { data: monthlyIncomeResp } = useMonthlyIncome();
+  const { data: incomeStatsResp } = useIncomeStats();
 
   const todayData = todayResp?.data;
   const upcomingData = upcomingResp?.data || [];
-  const weeklyIncome = weeklyIncomeResp?.data;
-  const monthlyIncome = monthlyIncomeResp?.data;
+  const incomeStats = incomeStatsResp?.data;
 
   return (
     <div className="p-4 md:p-8 w-full max-w-7xl mx-auto space-y-8 pb-24 md:pb-8">
@@ -99,10 +97,10 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="relative z-10">
                 <div className="text-3xl font-black text-foreground">
-                  {formatCurrency(weeklyIncome?.estimated || 0)}
+                  {formatCurrency(incomeStats?.weekly?.estimated || 0)}
                 </div>
                 <p className="text-sm font-medium text-muted-foreground mt-1">
-                  Đã thu: {formatCurrency(weeklyIncome?.actual || 0)}
+                  Thực nhận: <span className="text-foreground">{formatCurrency(incomeStats?.weekly?.actual || 0)}</span>
                 </p>
               </CardContent>
             </Card>
@@ -111,7 +109,7 @@ export default function Dashboard() {
           <motion.div variants={itemVariants}>
             <Card className="bg-accent/10 border-none shadow-soft rounded-3xl overflow-hidden relative">
               <div className="absolute -right-6 -top-6 text-accent/20 pointer-events-none">
-                <DollarSign size={100} />
+                <Briefcase size={100} />
               </div>
               <CardHeader className="pb-2 relative z-10">
                 <CardTitle className="text-lg font-bold text-accent flex items-center gap-2">
@@ -123,15 +121,23 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="relative z-10">
                 <div className="text-3xl font-black text-foreground">
-                  {formatCurrency(monthlyIncome?.estimated || 0)}
+                  {formatCurrency(incomeStats?.monthly?.estimated || 0)}
                 </div>
                 <p className="text-sm font-medium text-muted-foreground mt-1">
-                  Đã thu: {formatCurrency(monthlyIncome?.actual || 0)}
+                  Thực nhận: <span className="text-foreground">{formatCurrency(incomeStats?.monthly?.actual || 0)}</span>
+                </p>
+                <p className="text-xs text-muted-foreground/80 mt-1">
+                  Tổng thu nhập lũy kế: {formatCurrency(incomeStats?.total?.actual || 0)}
                 </p>
               </CardContent>
             </Card>
           </motion.div>
         </div>
+
+        {/* TODAY WORKFLOW */}
+        <motion.div variants={itemVariants}>
+          <TodayWorkflowCard />
+        </motion.div>
 
         {/* UPCOMING SCHEDULES */}
         <motion.div variants={itemVariants} className="pt-6">

@@ -1,7 +1,7 @@
 import prisma from '../../config/database';
 import { PaginationParams } from '../../common/types/pagination';
 import { getSkip } from '../../common/utils/pagination';
-import { isTimeOverlapping } from '../../common/utils/dateUtils';
+import { isTimeOverlapping, isTimeClose } from '../../common/utils/dateUtils';
 import { CreateScheduleDto, UpdateScheduleDto } from './schedule.dto';
 
 interface ScheduleFilterParams extends PaginationParams {
@@ -103,6 +103,29 @@ export class ScheduleRepository {
 
     return schedulesOnDate.filter((schedule) =>
       isTimeOverlapping(startTime, endTime, schedule.startTime, schedule.endTime),
+    );
+  }
+
+  async findCloseSchedules(
+    date: Date,
+    startTime: string,
+    endTime: string,
+    excludeId?: number,
+    thresholdMinutes = 15
+  ) {
+    const schedulesOnDate = await prisma.schedule.findMany({
+      where: {
+        date,
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      include: {
+        student: true,
+        subject: true,
+      },
+    });
+
+    return schedulesOnDate.filter((schedule) =>
+      isTimeClose(startTime, endTime, schedule.startTime, schedule.endTime, thresholdMinutes)
     );
   }
 
