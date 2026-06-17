@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const createStudentSchema = z.object({
   fullName: z.string().min(1, 'Họ tên không được để trống'),
+  grade: z.string().optional(),
   address: z.string().optional(),
   apartmentFloor: z.string().optional(),
   parentPhone: z.string().optional(),
@@ -12,6 +13,7 @@ export const createStudentSchema = z.object({
 
 export const updateStudentSchema = z.object({
   fullName: z.string().min(1, 'Họ tên không được để trống').optional(),
+  grade: z.string().optional(),
   address: z.string().optional(),
   apartmentFloor: z.string().optional(),
   parentPhone: z.string().optional(),

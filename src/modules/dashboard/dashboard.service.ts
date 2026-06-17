@@ -33,7 +33,8 @@ export class DashboardService {
     });
 
     return {
-      count: schedules.length,
+      total: schedules.length,
+      completed: schedules.filter(s => s.completed).length,
       schedules,
     };
   }
@@ -144,33 +145,44 @@ export class DashboardService {
     const startOfMonth = getStartOfMonth();
     const endOfMonth = getEndOfMonth();
 
-    const [weeklyResult, monthlyResult, totalResult] = await Promise.all([
+    const [weeklyAll, weeklyPaid, monthlyAll, monthlyPaid, totalAll, totalPaid] = await Promise.all([
       prisma.schedule.aggregate({
-        where: { completed: true, date: { gte: startOfWeek, lte: endOfWeek } },
-        _sum: { actualIncome: true, estimatedIncome: true },
+        where: { date: { gte: startOfWeek, lte: endOfWeek } },
+        _sum: { estimatedIncome: true },
       }),
       prisma.schedule.aggregate({
-        where: { completed: true, date: { gte: startOfMonth, lte: endOfMonth } },
-        _sum: { actualIncome: true, estimatedIncome: true },
+        where: { isPaid: true, date: { gte: startOfWeek, lte: endOfWeek } },
+        _sum: { actualIncome: true },
       }),
       prisma.schedule.aggregate({
-        where: { completed: true },
-        _sum: { actualIncome: true, estimatedIncome: true },
+        where: { date: { gte: startOfMonth, lte: endOfMonth } },
+        _sum: { estimatedIncome: true },
+      }),
+      prisma.schedule.aggregate({
+        where: { isPaid: true, date: { gte: startOfMonth, lte: endOfMonth } },
+        _sum: { actualIncome: true },
+      }),
+      prisma.schedule.aggregate({
+        _sum: { estimatedIncome: true },
+      }),
+      prisma.schedule.aggregate({
+        where: { isPaid: true },
+        _sum: { actualIncome: true },
       }),
     ]);
 
     return {
       weekly: {
-        actual: weeklyResult._sum.actualIncome ?? 0,
-        estimated: weeklyResult._sum.estimatedIncome ?? 0,
+        actual: weeklyPaid._sum.actualIncome ?? 0,
+        estimated: weeklyAll._sum.estimatedIncome ?? 0,
       },
       monthly: {
-        actual: monthlyResult._sum.actualIncome ?? 0,
-        estimated: monthlyResult._sum.estimatedIncome ?? 0,
+        actual: monthlyPaid._sum.actualIncome ?? 0,
+        estimated: monthlyAll._sum.estimatedIncome ?? 0,
       },
       total: {
-        actual: totalResult._sum.actualIncome ?? 0,
-        estimated: totalResult._sum.estimatedIncome ?? 0,
+        actual: totalPaid._sum.actualIncome ?? 0,
+        estimated: totalAll._sum.estimatedIncome ?? 0,
       },
     };
   }

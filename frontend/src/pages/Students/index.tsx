@@ -11,9 +11,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const createStudentSchema = z.object({
   fullName: z.string().min(1, 'Họ tên không được để trống'),
+  grade: z.string().optional(),
   address: z.string().optional(),
   apartmentFloor: z.string().optional(),
   parentPhone: z.string().optional(),
@@ -44,6 +46,7 @@ const StudentsPage = () => {
     resolver: zodResolver(createStudentSchema),
     defaultValues: {
       fullName: '',
+      grade: '',
       address: '',
       apartmentFloor: '',
       parentPhone: '',
@@ -57,6 +60,7 @@ const StudentsPage = () => {
     setSelectedStudent(student);
     form.reset({
       fullName: student.fullName,
+      grade: student.grade || '',
       address: student.address || '',
       apartmentFloor: student.apartmentFloor || '',
       parentPhone: student.parentPhone || '',
@@ -144,19 +148,46 @@ const StudentsPage = () => {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <FormField
-                  control={form.control}
-                  name="fullName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Họ và tên *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nguyễn Văn A" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Họ và tên *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nguyễn Văn A" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="grade"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Lớp</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Chọn lớp..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {[...Array(12)].map((_, i) => (
+                              <SelectItem key={i+1} value={`Lớp ${i+1}`}>Lớp {i+1}</SelectItem>
+                            ))}
+                            <SelectItem value="Đại học">Đại học</SelectItem>
+                            <SelectItem value="Người đi làm">Người đi làm</SelectItem>
+                            <SelectItem value="Khác">Khác</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
                   name="address"
@@ -351,6 +382,14 @@ const StudentsPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-5 space-y-3.5 flex-1">
+                {student.grade && (
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <div className="bg-accent/20 p-1.5 rounded-lg shrink-0">
+                      <Baby className="w-3.5 h-3.5 text-accent-foreground" />
+                    </div>
+                    <span className="font-medium text-foreground">{student.grade}</span>
+                  </div>
+                )}
                 {student.address && (
                   <div className="flex items-start gap-3 text-sm text-muted-foreground">
                     <div className="bg-accent/20 p-1.5 rounded-lg shrink-0 mt-0.5">
@@ -382,7 +421,7 @@ const StudentsPage = () => {
                   </div>
                 )}
                 
-                {(!student.address && !student.apartmentFloor && !student.parentPhone && !student.note) && (
+                {(!student.address && !student.apartmentFloor && !student.parentPhone && !student.note && !student.grade) && (
                   <div className="text-sm text-muted-foreground/50 italic py-4 text-center">
                     Chưa có thông tin bổ sung
                   </div>
@@ -429,19 +468,46 @@ const StudentsPage = () => {
             {/* Same form content but we use a ref or copy it. To keep it simple, we just render the form again or extract it.
                 Since extracting takes a lot of changes, we can just duplicate the form content here for now. */}
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-              <FormField
-                control={form.control}
-                name="fullName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Họ và tên *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nguyễn Văn A" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Họ và tên *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nguyễn Văn A" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="grade"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lớp</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Chọn lớp..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {[...Array(12)].map((_, i) => (
+                            <SelectItem key={i+1} value={`Lớp ${i+1}`}>Lớp {i+1}</SelectItem>
+                          ))}
+                          <SelectItem value="Đại học">Đại học</SelectItem>
+                          <SelectItem value="Người đi làm">Người đi làm</SelectItem>
+                          <SelectItem value="Khác">Khác</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="tuitionFeePerSession"

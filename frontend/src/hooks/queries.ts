@@ -96,6 +96,9 @@ export const useToggleLessonPrepared = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => scheduleApi.markLessonPrepared(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['schedules'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 };
