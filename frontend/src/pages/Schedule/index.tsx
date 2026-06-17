@@ -5,8 +5,8 @@ import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
 import type { EventContentArg, EventDropArg, EventReceiveArg } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 import { format } from 'date-fns';
-import { useWeeklySchedules, useUpdateSchedule, useStudents, useCreateSchedule } from '../../hooks/queries';
-import { Monitor, MapPin, CheckCircle2, Loader2 } from 'lucide-react';
+import { useWeeklySchedules, useUpdateSchedule, useStudents, useCreateSchedule, useSubjects, useDeleteSchedule } from '../../hooks/queries';
+import { Monitor, MapPin, CheckCircle2, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -23,8 +23,17 @@ const SchedulePage = () => {
   const { data: studentsResponse, isLoading: isLoadingStudents } = useStudents();
   const students = studentsResponse?.data || [];
   
+  const { data: subjectsResponse } = useSubjects();
+  const allSubjects = subjectsResponse?.data || [];
+  
+  const studentsRef = useRef(students);
+  useEffect(() => {
+    studentsRef.current = students;
+  }, [students]);
+  
   const { mutateAsync: updateSchedule } = useUpdateSchedule();
   const { mutateAsync: createSchedule } = useCreateSchedule();
+  const { mutateAsync: deleteSchedule } = useDeleteSchedule();
 
   const [pendingSchedule, setPendingSchedule] = useState<any>(null);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
@@ -43,7 +52,9 @@ const SchedulePage = () => {
           const title = eventEl.getAttribute('data-title');
           const subjectId = eventEl.getAttribute('data-subject-id');
           return {
+            id: `pending_${id}_${Date.now()}`,
             title: title,
+            duration: '02:00',
             create: true,
             extendedProps: {
               studentId: Number(id),
@@ -60,10 +71,11 @@ const SchedulePage = () => {
   }, []);
 
   const events = response?.data?.map((schedule) => {
+    const dateStr = schedule.date.includes('T') ? schedule.date.split('T')[0] : schedule.date;
     return {
       id: schedule.id.toString(),
-      start: `${schedule.date}T${schedule.startTime}`,
-      end: `${schedule.date}T${schedule.endTime}`,
+      start: `${dateStr}T${schedule.startTime}`,
+      end: `${dateStr}T${schedule.endTime}`,
       extendedProps: {
         studentName: schedule.student?.fullName || 'Unknown Student',
         subjectName: schedule.subject?.name || 'Unknown Subject',
@@ -133,10 +145,21 @@ const SchedulePage = () => {
     const { event } = info;
     const studentId = event.extendedProps.studentId;
     
-    const student = students.find((s: any) => s.id === studentId);
+    const student = studentsRef.current.find((s: any) => s.id === studentId);
     
-    if (!student || !student.subjects || student.subjects.length === 0) {
-      toast.error('Học sinh này chưa được gán môn học!');
+    if (!student) {
+      toast.error('Không tìm thấy thông tin học sinh!');
+      event.remove();
+      return;
+    }
+    
+    // Determine available subjects for the dropdown
+    const availableSubjects = student.subjects && student.subjects.length > 0 
+      ? student.subjects.map((s: any) => s.subject)
+      : allSubjects;
+      
+    if (availableSubjects.length === 0) {
+      toast.error('Chưa có môn học nào trong hệ thống! Vui lòng thêm môn học trước.');
       event.remove();
       return;
     }
@@ -156,13 +179,13 @@ const SchedulePage = () => {
     setPendingSchedule({
       studentId,
       studentName: student.fullName,
-      subjects: student.subjects.map((s: any) => s.subject),
+      subjects: availableSubjects,
       date: newDate,
       startTime: newStartTime,
       endTime: newEndTime,
       fcEvent: event,
     });
-    setSelectedSubjectId(student.subjects[0].subjectId);
+    setSelectedSubjectId(student.subjects?.[0]?.subjectId || availableSubjects[0]?.id || 0);
     setTeachingNote('');
     setLessonPrepared(false);
     setIsEditMode(false);
@@ -195,6 +218,8 @@ const SchedulePage = () => {
           }
         });
         toast.success('Cập nhật nội dung thành công!');
+        pendingSchedule.fcEvent.setExtendedProp('lessonPrepared', lessonPrepared);
+        pendingSchedule.fcEvent.setExtendedProp('teachingNote', teachingNote);
       } else {
         const res = await createSchedule({
           studentId: pendingSchedule.studentId,
@@ -212,13 +237,36 @@ const SchedulePage = () => {
         } else {
           toast.success('Xếp lịch thành công!');
         }
-        pendingSchedule.fcEvent.remove();
+        
+        const newSubject = allSubjects.find((s: any) => s.id === selectedSubjectId);
+        pendingSchedule.fcEvent.setProp('id', res.data.id.toString());
+        pendingSchedule.fcEvent.setExtendedProp('subjectName', newSubject?.name || 'Môn học');
+        pendingSchedule.fcEvent.setExtendedProp('lessonPrepared', lessonPrepared);
+        pendingSchedule.fcEvent.setExtendedProp('teachingNote', teachingNote);
+        pendingSchedule.fcEvent.setExtendedProp('mode', 'OFFLINE');
+        pendingSchedule.fcEvent.setExtendedProp('completed', false);
       }
       
       setIsScheduleDialogOpen(false);
       setPendingSchedule(null);
     } catch (error: any) {
       toast.error(error?.message || 'Lỗi khi lưu ca học');
+    }
+  };
+
+  const handleDeleteSchedule = async () => {
+    if (!pendingSchedule || !isEditMode) return;
+    
+    if (!window.confirm('Bạn có chắc chắn muốn xóa ca học này?')) return;
+    
+    try {
+      await deleteSchedule(pendingSchedule.id);
+      toast.success('Xóa ca học thành công!');
+      pendingSchedule.fcEvent.remove();
+      setIsScheduleDialogOpen(false);
+      setPendingSchedule(null);
+    } catch (error: any) {
+      toast.error(error?.message || 'Lỗi khi xóa ca học');
     }
   };
 
@@ -318,6 +366,7 @@ const SchedulePage = () => {
             center: 'title',
             right: 'timeGridWeek,timeGridDay'
           }}
+          firstDay={1}
           events={events}
           editable={true}
           droppable={true}
@@ -388,20 +437,33 @@ const SchedulePage = () => {
               </label>
             </div>
           </div>
-          <div className="flex justify-end gap-2 mt-2">
-            <Button variant="outline" className="rounded-xl" onClick={() => {
-              if (!isEditMode) {
-                pendingSchedule?.fcEvent.remove();
-              }
-              setPendingSchedule(null);
-              setIsScheduleDialogOpen(false);
-            }}>
-              Hủy
-            </Button>
-            <Button className="rounded-xl" disabled={updateSchedule.isPending || createSchedule.isPending} onClick={handleConfirmSchedule}>
-              {(updateSchedule.isPending || createSchedule.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isEditMode ? 'Lưu cập nhật' : 'Lưu ca học'}
-            </Button>
+          <div className="flex justify-end gap-2 mt-4 items-center">
+            {isEditMode && (
+              <Button 
+                variant="destructive" 
+                className="rounded-xl mr-auto" 
+                onClick={handleDeleteSchedule}
+                disabled={deleteSchedule.isPending}
+              >
+                {deleteSchedule.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                Xóa
+              </Button>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => {
+                if (!isEditMode) {
+                  pendingSchedule?.fcEvent.remove();
+                }
+                setPendingSchedule(null);
+                setIsScheduleDialogOpen(false);
+              }}>
+                Hủy
+              </Button>
+              <Button className="rounded-xl" disabled={updateSchedule.isPending || createSchedule.isPending} onClick={handleConfirmSchedule}>
+                {(updateSchedule.isPending || createSchedule.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {isEditMode ? 'Lưu cập nhật' : 'Lưu ca học'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

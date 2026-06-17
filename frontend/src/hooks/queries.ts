@@ -70,6 +70,17 @@ export const useUpdateSchedule = () => {
   });
 };
 
+export const useDeleteSchedule = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => scheduleApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
 export const useToggleCompleted = () => {
   const queryClient = useQueryClient();
   return useMutation({
