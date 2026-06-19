@@ -30,6 +30,7 @@ export const updateScheduleSchema = z.object({
   mode: z.enum(['ONLINE', 'OFFLINE']).optional(),
   note: z.string().optional(),
   lessonPrepared: z.boolean().optional(),
+  completed: z.boolean().optional(),
   estimatedIncome: z.number().min(0).optional(),
   actualIncome: z.number().min(0).optional(),
   teachingNote: z.string().optional(),

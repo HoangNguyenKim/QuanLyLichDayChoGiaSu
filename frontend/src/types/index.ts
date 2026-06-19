@@ -7,6 +7,7 @@ export interface Student {
   parentPhone?: string;
   note?: string;
   tuitionFeePerSession?: number;
+  previousUnpaidSessions?: number;
   createdAt?: string;
   updatedAt?: string;
   schedules?: Schedule[];

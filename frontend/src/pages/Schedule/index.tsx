@@ -5,8 +5,8 @@ import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
 import type { EventContentArg, EventDropArg, EventReceiveArg } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 import { format } from 'date-fns';
-import { useWeeklySchedules, useUpdateSchedule, useStudents, useCreateSchedule, useSubjects, useDeleteSchedule } from '../../hooks/queries';
-import { Monitor, MapPin, CheckCircle2, Loader2, Trash2 } from 'lucide-react';
+import { useWeeklySchedules, useUpdateSchedule, useStudents, useCreateSchedule, useSubjects, useDeleteSchedule, useCopyLastWeekSchedules } from '../../hooks/queries';
+import { Monitor, MapPin, CheckCircle2, Loader2, Trash2, Clock, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,13 @@ const SchedulePage = () => {
   const calendarRef = useRef<FullCalendar>(null);
   const externalEventsRef = useRef<HTMLDivElement>(null);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   const { data: response } = useWeeklySchedules(format(currentDate, 'yyyy-MM-dd'));
   const { data: studentsResponse, isLoading: isLoadingStudents } = useStudents();
@@ -34,12 +41,14 @@ const SchedulePage = () => {
   const { mutateAsync: updateSchedule } = useUpdateSchedule();
   const { mutateAsync: createSchedule } = useCreateSchedule();
   const { mutateAsync: deleteSchedule } = useDeleteSchedule();
+  const { mutateAsync: copyLastWeek, isPending: isCopyingLastWeek } = useCopyLastWeekSchedules();
 
   const [pendingSchedule, setPendingSchedule] = useState<any>(null);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number>(0);
   const [lessonPrepared, setLessonPrepared] = useState<boolean>(false);
+  const [completed, setCompleted] = useState<boolean>(false);
   const [teachingNote, setTeachingNote] = useState<string>('');
 
   useEffect(() => {
@@ -201,6 +210,7 @@ const SchedulePage = () => {
     });
     setTeachingNote(event.extendedProps.teachingNote || '');
     setLessonPrepared(event.extendedProps.lessonPrepared || false);
+    setCompleted(event.extendedProps.completed || false);
     setIsEditMode(true);
     setIsScheduleDialogOpen(true);
   };
@@ -215,10 +225,12 @@ const SchedulePage = () => {
           data: {
             teachingNote,
             lessonPrepared,
+            completed,
           }
         });
         toast.success('Cập nhật nội dung thành công!');
         pendingSchedule.fcEvent.setExtendedProp('lessonPrepared', lessonPrepared);
+        pendingSchedule.fcEvent.setExtendedProp('completed', completed);
         pendingSchedule.fcEvent.setExtendedProp('teachingNote', teachingNote);
       } else {
         const res = await createSchedule({
@@ -278,70 +290,89 @@ const SchedulePage = () => {
     const borderColor = completed ? 'border-green-300' : 'border-blue-200';
     const textColor = completed ? 'text-green-800' : 'text-blue-800';
 
+    // Lấy 2 chữ cuối của tên học sinh
+    const nameWords = studentName.trim().split(/\s+/);
+    const shortNameWords = nameWords.length > 2 ? nameWords.slice(-2) : nameWords;
+
+    const cardStyles = completed
+      ? 'bg-gradient-to-br from-emerald-50/90 to-teal-100/50 border-y-emerald-200/60 border-r-emerald-200/60 border-l-[5px] border-l-emerald-500 text-emerald-950'
+      : 'bg-gradient-to-br from-blue-50/90 to-indigo-100/50 border-y-blue-200/60 border-r-blue-200/60 border-l-[5px] border-l-blue-500 text-slate-800';
+
     return (
-      <div className={`w-full h-full p-2 flex flex-col gap-1 rounded-2xl border-2 ${borderColor} ${bgColor} ${textColor} shadow-soft relative overflow-hidden`}>
-        {/* Top Header */}
-        <div className="flex items-center justify-between">
-          <div className="font-bold text-sm truncate pr-2" title={studentName}>
-            {studentName}
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
+      <div className={`w-full h-full p-3 flex flex-col gap-1.5 rounded-[1.25rem] border ${cardStyles} shadow-sm backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:shadow-md hover:scale-[1.01] group`}>
+        {/* Soft background glow for premium feel */}
+        <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/60 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
+
+        {/* Absolute Icons -> Moved to normal flow at the top */}
+        <div className="flex justify-end w-full relative z-10">
+          <div className="flex items-center gap-1.5 bg-white/70 px-2 py-1 rounded-full shadow-sm backdrop-blur-md border border-white/60">
             {lessonPrepared && (
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm" title="Lesson Prepared" />
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" title="Đã soạn bài" />
             )}
             {mode === 'ONLINE' ? (
-              <Monitor size={14} className="text-blue-600" />
+              <Monitor size={14} className={completed ? 'text-emerald-600' : 'text-blue-600'} />
             ) : (
               <MapPin size={14} className="text-orange-500" />
             )}
           </div>
         </div>
+
+        {/* Top Header - Name */}
+        <div className="flex flex-col gap-0 relative z-10 mt-1">
+          {shortNameWords.map((word: string, index: number) => (
+            <div key={index} className="font-extrabold text-xs md:text-[13px] uppercase tracking-tight leading-none mb-1 opacity-90 drop-shadow-sm break-words whitespace-normal">
+              {word}
+            </div>
+          ))}
+        </div>
         
         {/* Subject */}
-        <div className="text-xs font-medium opacity-80 truncate">
-          {subjectName}
+        <div className="text-xs md:text-sm font-semibold opacity-75 break-words whitespace-normal mt-1 relative z-10 flex items-center gap-1.5">
+          <div className={`w-1.5 h-1.5 rounded-full ${completed ? 'bg-emerald-400' : 'bg-blue-400'}`}></div>
+          <span className="leading-tight">{subjectName}</span>
         </div>
         
-        {/* Time - Optional, FullCalendar usually shows it but we can customize */}
-        <div className="text-[10px] font-semibold mt-auto opacity-70">
-          {eventInfo.timeText}
+        {/* Time - Elegant pill pushed to bottom */}
+        <div className={`flex items-center gap-1.5 text-[11px] md:text-xs font-bold mt-auto w-fit px-2.5 py-1 rounded-full shadow-sm border bg-white/80 backdrop-blur-md relative z-10 ${completed ? 'border-emerald-200 text-emerald-700' : 'border-blue-200 text-blue-700'}`}>
+          <Clock size={13} />
+          <span>{eventInfo.timeText}</span>
         </div>
         
-        {/* Completed Overlay Icon */}
+        {/* Completed Watermark */}
         {completed && (
-          <CheckCircle2 className="absolute bottom-1 right-1 text-green-500 opacity-50" size={24} />
+          <CheckCircle2 className="absolute -bottom-4 -right-4 text-emerald-500/10 pointer-events-none" size={120} strokeWidth={1} />
         )}
       </div>
     );
   };
 
   return (
-    <div className="p-4 md:p-6 w-full max-w-screen-2xl mx-auto flex flex-col md:flex-row gap-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="p-2 lg:p-3 xl:p-4 w-full max-w-screen-2xl mx-auto flex flex-col lg:flex-row gap-3 lg:gap-4 xl:gap-5 animate-in fade-in zoom-in-95 duration-300 h-[calc(100vh-80px)] lg:h-[calc(100vh-80px)]">
       
       {/* Sidebar for Students */}
-      <div className="w-full md:w-72 bg-white rounded-3xl p-5 shadow-soft border border-pink-100 flex-shrink-0 flex flex-col max-h-[85vh] md:sticky md:top-6 z-10">
-        <h2 className="text-xl font-bold text-pink-800 mb-2 flex items-center gap-2">
+      <div className="w-full lg:w-48 xl:w-60 bg-white rounded-2xl lg:rounded-3xl p-3 lg:p-3 xl:p-4 shadow-soft border border-pink-100 flex-shrink-0 flex flex-col h-auto lg:h-full lg:sticky lg:top-3 z-10">
+        <h2 className="text-lg font-bold text-pink-800 mb-1 flex items-center gap-2">
           🧸 Học sinh
         </h2>
-        <p className="text-sm text-slate-500 mb-4 pb-4 border-b border-pink-50">
-          Kéo học sinh và thả vào lịch để xếp lịch dạy nhanh chóng.
+        <p className="text-[11px] lg:text-xs text-slate-500 mb-2 pb-2 border-b border-pink-50 hidden lg:block leading-tight">
+          Kéo học sinh và thả vào lịch để xếp lịch.
         </p>
-        <div ref={externalEventsRef} className="flex-1 overflow-y-auto flex flex-col gap-3 pr-2 scrollbar-thin">
+        <div ref={externalEventsRef} className="flex-1 overflow-x-auto lg:overflow-x-hidden overflow-y-hidden lg:overflow-y-auto flex flex-row lg:flex-col gap-2 pb-2 lg:pb-0 lg:pr-1 scrollbar-thin">
           {isLoadingStudents ? (
-            <div className="flex justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            <div className="flex justify-center p-4"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
           ) : students.length === 0 ? (
-            <div className="text-sm text-slate-400 italic text-center py-4">Chưa có học sinh</div>
+            <div className="text-xs text-slate-400 italic text-center py-4">Chưa có học sinh</div>
           ) : students.map(student => (
             <div 
               key={student.id}
-              className="fc-event p-3.5 bg-gradient-to-br from-pastel-blue to-blue-50 text-blue-900 rounded-2xl cursor-grab active:cursor-grabbing border border-blue-200/60 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
+              className="fc-event p-2 lg:p-2.5 xl:p-3 bg-gradient-to-br from-pastel-blue to-blue-50 text-blue-900 rounded-xl lg:rounded-2xl cursor-grab active:cursor-grabbing border border-blue-200/60 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 min-w-[120px] lg:min-w-0 flex-shrink-0"
               data-id={student.id}
               data-title={student.fullName}
               data-subject-id={student.subjects?.[0]?.subjectId || 0}
             >
-              <div className="font-semibold text-sm truncate">{student.fullName}</div>
-              <div className="text-xs text-blue-600/80 mt-1 flex items-center gap-1 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+              <div className="font-semibold text-xs lg:text-sm truncate leading-tight">{student.fullName}</div>
+              <div className="text-[10px] lg:text-xs text-blue-600/80 mt-0.5 flex items-center gap-1 truncate">
+                <span className="w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full bg-blue-400"></span>
                 {student.subjects?.[0]?.subject?.name || 'Chưa gán môn'}
               </div>
             </div>
@@ -350,21 +381,38 @@ const SchedulePage = () => {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-between mb-4 pl-2">
-          <h1 className="text-2xl md:text-3xl font-bold text-pink-800 flex items-center gap-2">
+        <div className="flex items-center justify-between mb-3 pl-2">
+          <h1 className="text-xl md:text-2xl font-bold text-pink-800 flex items-center gap-2">
             📅 Lịch Dạy Của Bạn
           </h1>
+          <Button
+            onClick={async () => {
+              try {
+                const res = await copyLastWeek(format(currentDate, 'yyyy-MM-dd'));
+                toast.success(`Đã copy thành công ${res?.data?.copied || 0} buổi dạy!`);
+              } catch (e: any) {
+                toast.error(e?.message || 'Có lỗi khi copy lịch');
+              }
+            }}
+            disabled={isCopyingLastWeek}
+            variant="outline"
+            className="rounded-xl border-pink-200 text-pink-700 hover:bg-pink-50"
+          >
+            {isCopyingLastWeek ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Copy className="w-4 h-4 mr-2" />}
+            <span className="hidden sm:inline">Copy tuần trước</span>
+            <span className="sm:hidden">Copy</span>
+          </Button>
         </div>
         
-        <div className="bg-white rounded-3xl p-4 md:p-6 shadow-soft border border-pink-100 flex-1">
+        <div className="bg-white rounded-2xl lg:rounded-3xl p-2 lg:p-5 shadow-soft border border-pink-100 flex-1 overflow-hidden flex flex-col">
           <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
+          initialView={isMobile ? "timeGridDay" : "timeGridWeek"}
           headerToolbar={{
-            left: 'prev,next today',
+            left: isMobile ? 'prev,next' : 'prev,next today',
             center: 'title',
-            right: 'timeGridWeek,timeGridDay'
+            right: isMobile ? 'today' : 'timeGridWeek,timeGridDay'
           }}
           firstDay={1}
           events={events}
@@ -378,7 +426,7 @@ const SchedulePage = () => {
           allDaySlot={false}
           slotMinTime="06:00:00"
           slotMaxTime="23:00:00"
-          height="auto"
+          height="100%"
           expandRows={true}
           nowIndicator={true}
           datesSet={(arg) => setCurrentDate(arg.view.currentStart)}
@@ -426,15 +474,30 @@ const SchedulePage = () => {
               />
             </div>
             
-            <div className="flex items-center space-x-3 bg-secondary/10 p-3 rounded-xl">
-              <Checkbox 
-                id="prepared" 
-                checked={lessonPrepared}
-                onCheckedChange={(checked) => setLessonPrepared(checked as boolean)}
-              />
-              <label htmlFor="prepared" className="text-sm font-medium leading-none cursor-pointer">
-                Đã soạn bài cho buổi này
-              </label>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center space-x-3 bg-secondary/10 p-3 rounded-xl">
+                <Checkbox 
+                  id="prepared" 
+                  checked={lessonPrepared}
+                  onCheckedChange={(checked) => setLessonPrepared(checked as boolean)}
+                />
+                <label htmlFor="prepared" className="text-sm font-medium leading-none cursor-pointer">
+                  Đã soạn bài cho buổi này
+                </label>
+              </div>
+              
+              {isEditMode && (
+                <div className="flex items-center space-x-3 bg-secondary/10 p-3 rounded-xl">
+                  <Checkbox 
+                    id="completed" 
+                    checked={completed}
+                    onCheckedChange={(checked) => setCompleted(checked as boolean)}
+                  />
+                  <label htmlFor="completed" className="text-sm font-medium leading-none cursor-pointer">
+                    Đã hoàn thành buổi dạy này
+                  </label>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4 items-center">

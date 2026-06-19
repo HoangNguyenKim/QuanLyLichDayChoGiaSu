@@ -190,6 +190,50 @@ export class ScheduleService {
 
     return { hasWarning: false };
   }
+
+  async copyLastWeekSchedules(targetDateString?: string) {
+    const targetDate = targetDateString ? parseDate(targetDateString) : new Date();
+    
+    // Get last week's date by subtracting 7 days
+    const lastWeekDate = new Date(targetDate);
+    lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+    
+    const startOfLastWeek = getStartOfWeek(lastWeekDate);
+    const endOfLastWeek = getEndOfWeek(lastWeekDate);
+    
+    const lastWeekSchedules = await this.repository.findByDateRange(startOfLastWeek, endOfLastWeek);
+    
+    if (!lastWeekSchedules || lastWeekSchedules.length === 0) {
+      return { copied: 0 };
+    }
+    
+    let count = 0;
+    for (const schedule of lastWeekSchedules) {
+      // Add 7 days to the original schedule date
+      const newDate = new Date(schedule.date);
+      newDate.setDate(newDate.getDate() + 7);
+      // Format as YYYY-MM-DD
+      const newDateString = newDate.toISOString().split('T')[0];
+      
+      await this.repository.create({
+        studentId: schedule.studentId,
+        subjectId: schedule.subjectId,
+        date: newDateString,
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        location: schedule.location || undefined,
+        locationDetail: schedule.locationDetail || undefined,
+        mode: schedule.mode,
+        note: schedule.note || undefined,
+        lessonPrepared: false,
+        estimatedIncome: schedule.estimatedIncome || 0,
+        actualIncome: 0,
+      });
+      count++;
+    }
+    
+    return { copied: count };
+  }
 }
 
 export const scheduleService = new ScheduleService(scheduleRepository);

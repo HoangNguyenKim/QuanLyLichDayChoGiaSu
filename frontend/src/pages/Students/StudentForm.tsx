@@ -17,6 +17,7 @@ export const createStudentSchema = z.object({
   parentPhone: z.string().optional(),
   note: z.string().optional(),
   tuitionFeePerSession: z.coerce.number().min(0, 'Giá tiền không được âm').optional(),
+  previousUnpaidSessions: z.coerce.number().min(0, 'Số buổi không được âm').optional(),
   subjectIds: z.array(z.number()).optional(),
 });
 
@@ -53,6 +54,7 @@ export const StudentForm = ({
       parentPhone: defaultValues?.parentPhone || '',
       note: defaultValues?.note || '',
       tuitionFeePerSession: defaultValues?.tuitionFeePerSession || 0,
+      previousUnpaidSessions: defaultValues?.previousUnpaidSessions || 0,
       subjectIds: defaultValues?.subjectIds || [],
     },
   });
@@ -224,27 +226,47 @@ export const StudentForm = ({
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="tuitionFeePerSession"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Học phí 1 buổi (VNĐ)</FormLabel>
-              <FormControl>
-                <Input 
-                  type="text" 
-                  placeholder="200.000" 
-                  value={field.value ? Number(field.value).toLocaleString('vi-VN') : ''}
-                  onChange={(e) => {
-                    const rawValue = e.target.value.replace(/\D/g, '');
-                    field.onChange(rawValue ? Number(rawValue) : 0);
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="tuitionFeePerSession"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Học phí 1 buổi (VNĐ)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="text" 
+                    placeholder="200.000" 
+                    value={field.value ? Number(field.value).toLocaleString('vi-VN') : ''}
+                    onChange={(e) => {
+                      const rawValue = e.target.value.replace(/\D/g, '');
+                      field.onChange(rawValue ? Number(rawValue) : 0);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="previousUnpaidSessions"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Số buổi nợ cũ (nếu có)</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    placeholder="0" 
+                    {...field} 
+                    onChange={(e) => field.onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <FormField
           control={form.control}
           name="note"

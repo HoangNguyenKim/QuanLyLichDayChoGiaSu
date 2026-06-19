@@ -127,7 +127,7 @@ const StudentsPage = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {students.map((student) => {
-            const unpaidSchedules = student.schedules?.length || 0;
+            const unpaidSchedules = (student.schedules?.length || 0) + (student.previousUnpaidSessions || 0);
             const totalDebt = unpaidSchedules * (student.tuitionFeePerSession || 0);
 
             return (
@@ -244,6 +244,7 @@ const StudentsPage = () => {
                 parentPhone: selectedStudent.parentPhone || '',
                 note: selectedStudent.note || '',
                 tuitionFeePerSession: selectedStudent.tuitionFeePerSession || 0,
+                previousUnpaidSessions: selectedStudent.previousUnpaidSessions || 0,
                 subjectIds: selectedStudent.subjects?.map((s: any) => s.subjectId) || [],
               }}
               onSubmit={onEditSubmit}

@@ -16,6 +16,7 @@ model Student {
   parentPhone          String?
   note                 String?
   tuitionFeePerSession Float?           @default(0)
+  previousUnpaidSessions Int              @default(0)
   createdAt            DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   subjects       StudentSubject[]

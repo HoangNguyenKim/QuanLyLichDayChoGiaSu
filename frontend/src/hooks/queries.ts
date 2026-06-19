@@ -111,3 +111,14 @@ export const useToggleLessonPrepared = () => {
     },
   });
 };
+
+export const useCopyLastWeekSchedules = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (date?: string) => scheduleApi.copyLastWeek(date),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};

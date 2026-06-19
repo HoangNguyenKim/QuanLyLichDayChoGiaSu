@@ -57,7 +57,7 @@
 }
 
 .fc-timegrid-slot {
-  height: 3.5em !important; /* more breathing room */
+  height: 4.5em !important; /* more breathing room to utilize space for 2h events */
 }
 
 .fc-toolbar-title {

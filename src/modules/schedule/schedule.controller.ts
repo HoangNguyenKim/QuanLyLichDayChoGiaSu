@@ -135,6 +135,16 @@ export class ScheduleController {
       next(error);
     }
   };
+
+  copyLastWeek = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const dateString = req.body.date as string | undefined;
+      const result = await this.service.copyLastWeekSchedules(dateString);
+      res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 export const scheduleController = new ScheduleController(scheduleService);

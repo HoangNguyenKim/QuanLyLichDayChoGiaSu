@@ -202,6 +202,28 @@ router.get('/weekly', scheduleController.getWeekly);
 
 /**
  * @swagger
+ * /api/schedules/copy-last-week:
+ *   post:
+ *     summary: Copy lịch tuần trước
+ *     tags: [Schedules]
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Copy thành công
+ */
+router.post('/copy-last-week', scheduleController.copyLastWeek);
+
+/**
+ * @swagger
  * /api/schedules/monthly:
  *   get:
  *     summary: Lấy lịch dạy theo tháng

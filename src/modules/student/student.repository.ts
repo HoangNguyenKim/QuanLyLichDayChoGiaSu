@@ -126,6 +126,14 @@ export class StudentRepository {
   }
 
   async markPaid(studentId: number) {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+    });
+
+    if (!student) {
+      throw new Error('Học sinh không tồn tại');
+    }
+
     const schedulesToUpdate = await prisma.schedule.findMany({
       where: {
         studentId,
@@ -134,23 +142,34 @@ export class StudentRepository {
       },
     });
 
-    if (schedulesToUpdate.length === 0) {
+    if (schedulesToUpdate.length === 0 && student.previousUnpaidSessions === 0) {
       return { count: 0 };
     }
 
-    const updatedSchedules = await prisma.$transaction(
-      schedulesToUpdate.map((schedule) =>
-        prisma.schedule.update({
-          where: { id: schedule.id },
-          data: {
-            isPaid: true,
-            actualIncome: schedule.estimatedIncome,
-          },
-        })
-      )
-    );
+    const updatedSchedules = await prisma.$transaction(async (tx) => {
+      const schedules = await Promise.all(
+        schedulesToUpdate.map((schedule) =>
+          tx.schedule.update({
+            where: { id: schedule.id },
+            data: {
+              isPaid: true,
+              actualIncome: schedule.estimatedIncome,
+            },
+          })
+        )
+      );
 
-    return { count: updatedSchedules.length };
+      if (student.previousUnpaidSessions > 0) {
+        await tx.student.update({
+          where: { id: studentId },
+          data: { previousUnpaidSessions: 0 },
+        });
+      }
+
+      return schedules;
+    });
+
+    return { count: updatedSchedules.length + student.previousUnpaidSessions };
   }
 }
 

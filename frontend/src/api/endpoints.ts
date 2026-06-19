@@ -37,4 +37,5 @@ export const scheduleApi = {
   markLessonPrepared: (id: number) => axiosClient.patch<any, ApiResponse<Schedule>>(`/schedules/${id}/lesson-prepared`),
   checkConflict: (data: { date: string, startTime: string, endTime: string, excludeId?: number }) => 
     axiosClient.post<any, ApiResponse<any>>('/schedules/check-conflict', data),
+  copyLastWeek: (date?: string) => axiosClient.post<any, ApiResponse<any>>('/schedules/copy-last-week', { date }),
 };
