@@ -33,7 +33,7 @@ export const scheduleApi = {
   create: (data: Partial<Schedule>) => axiosClient.post<any, ApiResponse<Schedule>>('/schedules', data),
   update: (id: number, data: Partial<Schedule>) => axiosClient.put<any, ApiResponse<Schedule>>(`/schedules/${id}`, data),
   delete: (id: number) => axiosClient.delete<any, ApiResponse<void>>(`/schedules/${id}`),
-  markCompleted: (id: number) => axiosClient.patch<any, ApiResponse<Schedule>>(`/schedules/${id}/complete`),
+  markCompleted: (id: number, extraHours?: number) => axiosClient.patch<any, ApiResponse<Schedule>>(`/schedules/${id}/complete`, { extraHours }),
   markLessonPrepared: (id: number) => axiosClient.patch<any, ApiResponse<Schedule>>(`/schedules/${id}/lesson-prepared`),
   checkConflict: (data: { date: string, startTime: string, endTime: string, excludeId?: number }) => 
     axiosClient.post<any, ApiResponse<any>>('/schedules/check-conflict', data),

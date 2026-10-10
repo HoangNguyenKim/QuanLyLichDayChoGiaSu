@@ -93,7 +93,7 @@ export const useDeleteSchedule = () => {
 export const useToggleCompleted = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => scheduleApi.markCompleted(id),
+    mutationFn: ({ id, extraHours }: { id: number, extraHours?: number }) => scheduleApi.markCompleted(id, extraHours),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });

@@ -156,6 +156,14 @@ export class ScheduleRepository {
     if (date !== undefined) {
       updateData.date = new Date(date);
     }
+    
+    if (updateData.extraHours !== undefined) {
+      const schedule = await prisma.schedule.findUnique({ where: { id }, include: { student: true } });
+      if (schedule) {
+        const baseFee = schedule.student?.tuitionFeePerSession || 0;
+        updateData.estimatedIncome = baseFee + (updateData.extraHours * (baseFee / 2));
+      }
+    }
 
     return prisma.schedule.update({
       where: { id },
@@ -173,10 +181,28 @@ export class ScheduleRepository {
     });
   }
 
-  async markCompleted(id: number, completed: boolean) {
+  async markCompleted(id: number, completed: boolean, extraHours?: number) {
+    const schedule = await prisma.schedule.findUnique({ where: { id }, include: { student: true } });
+    if (!schedule) throw new Error('Schedule not found');
+
+    let updateData: any = { completed };
+    
+    if (completed) {
+      if (extraHours !== undefined) {
+        updateData.extraHours = extraHours;
+        const baseFee = schedule.student?.tuitionFeePerSession || 0;
+        const extraFee = extraHours * (baseFee / 2);
+        updateData.estimatedIncome = baseFee + extraFee;
+      }
+    } else {
+      // Revert if unmarked
+      updateData.extraHours = 0;
+      updateData.estimatedIncome = schedule.student?.tuitionFeePerSession || 0;
+    }
+
     return prisma.schedule.update({
       where: { id },
-      data: { completed },
+      data: updateData,
       include: {
         student: true,
         subject: true,

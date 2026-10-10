@@ -164,9 +164,9 @@ export class ScheduleService {
     return this.repository.delete(id);
   }
 
-  async markCompleted(id: number) {
+  async markCompleted(id: number, extraHours?: number) {
     const existing = await this.getById(id);
-    return this.repository.markCompleted(id, !existing.completed);
+    return this.repository.markCompleted(id, !existing.completed, extraHours);
   }
 
   async markLessonPrepared(id: number) {
@@ -223,7 +223,7 @@ export class ScheduleService {
         endTime: schedule.endTime,
         location: schedule.location || undefined,
         locationDetail: schedule.locationDetail || undefined,
-        mode: schedule.mode,
+        mode: schedule.mode as "ONLINE" | "OFFLINE",
         note: schedule.note || undefined,
         lessonPrepared: false,
         estimatedIncome: schedule.estimatedIncome || 0,

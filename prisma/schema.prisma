@@ -1,9 +1,10 @@
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "darwin", "darwin-arm64", "windows"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -40,27 +41,23 @@ model StudentSubject {
   @@unique([studentId, subjectId])
 }
 
-enum ScheduleMode {
-  ONLINE
-  OFFLINE
-}
-
 model Schedule {
   id              Int          @id @default(autoincrement())
   studentId       Int
   subjectId       Int
-  date            DateTime     @db.Date
+  date            DateTime
   startTime       String       // Format: "HH:mm"
   endTime         String       // Format: "HH:mm"
   location        String?
   locationDetail  String?
-  mode            ScheduleMode @default(OFFLINE)
+  mode            String       @default("OFFLINE")
   note            String?
   lessonPrepared  Boolean      @default(false)
   completed       Boolean      @default(false)
   isPaid          Boolean      @default(false)
   estimatedIncome Float?       @default(0)
   actualIncome    Float?       @default(0)
+  extraHours      Float        @default(0)
   teachingNote    String?
   notified30Min   Boolean      @default(false)
   notified1Hour   Boolean      @default(false)

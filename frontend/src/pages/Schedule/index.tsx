@@ -49,7 +49,9 @@ const SchedulePage = () => {
   const [selectedSubjectId, setSelectedSubjectId] = useState<number>(0);
   const [lessonPrepared, setLessonPrepared] = useState<boolean>(false);
   const [completed, setCompleted] = useState<boolean>(false);
+  const [extraHours, setExtraHours] = useState<number>(0);
   const [teachingNote, setTeachingNote] = useState<string>('');
+  const [isICalDialogOpen, setIsICalDialogOpen] = useState(false);
 
   useEffect(() => {
     let draggable: Draggable | null = null;
@@ -91,6 +93,7 @@ const SchedulePage = () => {
         mode: schedule.mode,
         lessonPrepared: schedule.lessonPrepared,
         completed: schedule.completed,
+        extraHours: schedule.extraHours || 0,
         teachingNote: schedule.teachingNote,
       },
     };
@@ -211,6 +214,7 @@ const SchedulePage = () => {
     setTeachingNote(event.extendedProps.teachingNote || '');
     setLessonPrepared(event.extendedProps.lessonPrepared || false);
     setCompleted(event.extendedProps.completed || false);
+    setExtraHours(event.extendedProps.extraHours || 0);
     setIsEditMode(true);
     setIsScheduleDialogOpen(true);
   };
@@ -226,11 +230,13 @@ const SchedulePage = () => {
             teachingNote,
             lessonPrepared,
             completed,
+            extraHours,
           }
         });
         toast.success('Cập nhật nội dung thành công!');
         pendingSchedule.fcEvent.setExtendedProp('lessonPrepared', lessonPrepared);
         pendingSchedule.fcEvent.setExtendedProp('completed', completed);
+        pendingSchedule.fcEvent.setExtendedProp('extraHours', extraHours);
         pendingSchedule.fcEvent.setExtendedProp('teachingNote', teachingNote);
       } else {
         const res = await createSchedule({
@@ -283,7 +289,7 @@ const SchedulePage = () => {
   };
 
   const renderEventContent = (eventInfo: EventContentArg) => {
-    const { studentName, subjectName, mode, lessonPrepared, completed } = eventInfo.event.extendedProps;
+    const { studentName, subjectName, mode, lessonPrepared, completed, extraHours } = eventInfo.event.extendedProps;
     
     // Pastel color based on completion or default
     const bgColor = completed ? 'bg-green-100' : 'bg-pastel-blue';
@@ -333,9 +339,16 @@ const SchedulePage = () => {
         </div>
         
         {/* Time - Elegant pill pushed to bottom */}
-        <div className={`flex items-center gap-1.5 text-[11px] md:text-xs font-bold mt-auto w-fit px-2.5 py-1 rounded-full shadow-sm border bg-white/80 backdrop-blur-md relative z-10 ${completed ? 'border-emerald-200 text-emerald-700' : 'border-blue-200 text-blue-700'}`}>
-          <Clock size={13} />
-          <span>{eventInfo.timeText}</span>
+        <div className="mt-auto flex items-center justify-between relative z-10 w-full">
+          <div className={`flex items-center gap-1.5 text-[11px] md:text-xs font-bold w-fit px-2.5 py-1 rounded-full shadow-sm border bg-white/80 backdrop-blur-md ${completed ? 'border-emerald-200 text-emerald-700' : 'border-blue-200 text-blue-700'}`}>
+            <Clock size={13} />
+            <span>{eventInfo.timeText}</span>
+          </div>
+          {extraHours > 0 && (
+            <div className="text-[11px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shadow-sm border border-amber-200">
+              +{extraHours}h
+            </div>
+          )}
         </div>
         
         {/* Completed Watermark */}
@@ -385,23 +398,33 @@ const SchedulePage = () => {
           <h1 className="text-xl md:text-2xl font-bold text-pink-800 flex items-center gap-2">
             📅 Lịch Dạy Của Bạn
           </h1>
-          <Button
-            onClick={async () => {
-              try {
-                const res = await copyLastWeek(format(currentDate, 'yyyy-MM-dd'));
-                toast.success(`Đã copy thành công ${res?.data?.copied || 0} buổi dạy!`);
-              } catch (e: any) {
-                toast.error(e?.message || 'Có lỗi khi copy lịch');
-              }
-            }}
-            disabled={isCopyingLastWeek}
-            variant="outline"
-            className="rounded-xl border-pink-200 text-pink-700 hover:bg-pink-50"
-          >
-            {isCopyingLastWeek ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Copy className="w-4 h-4 mr-2" />}
-            <span className="hidden sm:inline">Copy tuần trước</span>
-            <span className="sm:hidden">Copy</span>
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setIsICalDialogOpen(true)}
+              variant="outline"
+              className="rounded-xl border-blue-200 text-blue-700 hover:bg-blue-50"
+            >
+              <span className="hidden sm:inline">Đồng bộ điện thoại</span>
+              <span className="sm:hidden">Đồng bộ</span>
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  const res = await copyLastWeek(format(currentDate, 'yyyy-MM-dd'));
+                  toast.success(`Đã copy thành công ${res?.data?.copied || 0} buổi dạy!`);
+                } catch (e: any) {
+                  toast.error(e?.message || 'Có lỗi khi copy lịch');
+                }
+              }}
+              disabled={isCopyingLastWeek}
+              variant="outline"
+              className="rounded-xl border-pink-200 text-pink-700 hover:bg-pink-50"
+            >
+              {isCopyingLastWeek ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Copy className="w-4 h-4 mr-2" />}
+              <span className="hidden sm:inline">Copy tuần trước</span>
+              <span className="sm:hidden">Copy</span>
+            </Button>
+          </div>
         </div>
         
         <div className="bg-white rounded-2xl lg:rounded-3xl p-2 lg:p-5 shadow-soft border border-pink-100 flex-1 overflow-hidden flex flex-col">
@@ -487,15 +510,38 @@ const SchedulePage = () => {
               </div>
               
               {isEditMode && (
-                <div className="flex items-center space-x-3 bg-secondary/10 p-3 rounded-xl">
-                  <Checkbox 
-                    id="completed" 
-                    checked={completed}
-                    onCheckedChange={(checked) => setCompleted(checked as boolean)}
-                  />
-                  <label htmlFor="completed" className="text-sm font-medium leading-none cursor-pointer">
-                    Đã hoàn thành buổi dạy này
-                  </label>
+                <div className="flex flex-col gap-3 bg-secondary/10 p-3 rounded-xl">
+                  <div className="flex items-center space-x-3">
+                    <Checkbox 
+                      id="completed" 
+                      checked={completed}
+                      onCheckedChange={(checked) => setCompleted(checked as boolean)}
+                    />
+                    <label htmlFor="completed" className="text-sm font-medium leading-none cursor-pointer">
+                      Đã hoàn thành buổi dạy này
+                    </label>
+                  </div>
+                  {completed && (
+                    <div className="flex items-center gap-3 pl-7">
+                      <label className="text-sm">Giờ dạy thêm:</label>
+                      <div className="flex gap-1">
+                        {[0, 1, 2, 3].map((h) => (
+                          <button
+                            key={h}
+                            type="button"
+                            onClick={() => setExtraHours(h)}
+                            className={`px-3 py-1 rounded-lg border text-xs font-medium transition-all ${
+                              extraHours === h 
+                                ? 'bg-primary text-primary-foreground border-primary' 
+                                : 'bg-background hover:bg-secondary border-border'
+                            }`}
+                          >
+                            {h === 0 ? '0h' : `+${h}h`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -526,6 +572,42 @@ const SchedulePage = () => {
                 {(updateSchedule.isPending || createSchedule.isPending) && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {isEditMode ? 'Lưu cập nhật' : 'Lưu ca học'}
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isICalDialogOpen} onOpenChange={setIsICalDialogOpen}>
+        <DialogContent className="rounded-3xl border-primary/20 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-foreground text-center">
+              Đồng bộ lịch dạy
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Để xem lịch dạy trên ứng dụng Calendar (Google Calendar, Apple Calendar), bạn hãy thêm đường link bên dưới vào điện thoại:
+            </p>
+            <div className="flex gap-2">
+              <Input 
+                readOnly 
+                value={`${window.location.protocol}//${window.location.hostname}:3000/api/schedules/export/ical`} 
+                className="text-xs bg-muted"
+              />
+              <Button onClick={() => {
+                navigator.clipboard.writeText(`${window.location.protocol}//${window.location.hostname}:3000/api/schedules/export/ical`);
+                toast.success('Đã copy link!');
+              }}>
+                Copy
+              </Button>
+            </div>
+            <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 mt-4">
+              <h4 className="font-semibold text-amber-800 text-sm mb-1">Cách thêm vào điện thoại:</h4>
+              <ul className="text-xs text-amber-700 space-y-1 list-disc pl-4">
+                <li><b>iOS (iPhone):</b> Cài đặt {'>'} Lịch {'>'} Tài khoản {'>'} Thêm tài khoản {'>'} Khác {'>'} Thêm Lịch đã đăng ký {'>'} Dán link vào.</li>
+                <li><b>Google Calendar:</b> Mở web Google Calendar {'>'} Cài đặt {'>'} Thêm lịch {'>'} Từ URL {'>'} Dán link vào.</li>
+                <li><i>Lưu ý: Link này chỉ hoạt động khi bạn triển khai web lên server thật (có domain), hiện tại đang chạy localhost nên Google có thể sẽ không đọc được. Trên iPhone nếu chung mạng Wi-Fi có thể sẽ đọc được.</i></li>
+              </ul>
             </div>
           </div>
         </DialogContent>

@@ -5,6 +5,7 @@ import scheduleRoutes from '../modules/schedule/schedule.routes';
 import dashboardRoutes from '../modules/dashboard/dashboard.routes';
 import reminderRoutes from '../modules/reminder/reminder.routes';
 import notificationRoutes from '../modules/notification/notification.routes';
+import backupRoutes from '../modules/backup/backup.routes';
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use('/schedules', scheduleRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/reminders', reminderRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/backups', backupRoutes);
 
 export default router;

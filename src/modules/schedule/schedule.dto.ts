@@ -33,6 +33,7 @@ export const updateScheduleSchema = z.object({
   completed: z.boolean().optional(),
   estimatedIncome: z.number().min(0).optional(),
   actualIncome: z.number().min(0).optional(),
+  extraHours: z.number().min(0).optional(),
   teachingNote: z.string().optional(),
 });
 

@@ -10,7 +10,8 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-primary/10 p-4 border-r border-primary/20 shadow-soft">
+    <aside className="hidden md:flex flex-col w-64 bg-primary/10 border-r border-primary/20 shadow-soft" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+      <div className="pt-10 p-4 flex flex-col h-full">
       <div className="flex items-center gap-3 mb-8 px-2">
         <div className="w-12 h-12 bg-primary rounded-3xl flex items-center justify-center text-primary-foreground shadow-soft">
           <Calendar className="w-7 h-7" />
@@ -18,7 +19,7 @@ export default function Sidebar() {
         <h1 className="text-2xl font-bold text-primary">TutorApp</h1>
       </div>
       
-      <nav className="flex-1 space-y-2">
+      <nav className="flex-1 space-y-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         {links.map((link) => (
           <NavLink
             key={link.to}
@@ -35,6 +36,7 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+      </div>
     </aside>
   );
 }

@@ -1,0 +1,53 @@
+name: Build macOS Desktop App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          npm install
+          cd frontend && npm install
+
+      - name: Build backend & frontend
+        run: npm run build
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Generate Template Database
+        run: npx prisma db push --force-reset
+        env:
+          DATABASE_URL: "file:./dev.db"
+
+      - name: Build Electron App
+        run: npm run electron:dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Uncomment below and add secrets in GitHub to enable Code Signing & Notarization
+          # CSC_LINK: ${{ secrets.MAC_CERTS }}
+          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTS_PASSWORD }}
+          # APPLEID: ${{ secrets.APPLE_ID }}
+          # APPLEIDPASS: ${{ secrets.APPLE_ID_PASSWORD }}
+          # TEAMID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TutorManager-macOS
+          path: release/*.dmg

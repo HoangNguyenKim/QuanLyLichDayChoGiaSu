@@ -109,7 +109,8 @@ export class ScheduleController {
   markCompleted = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = parseInt(req.params.id, 10);
-      const schedule = await this.service.markCompleted(id);
+      const extraHours = req.body.extraHours ? parseFloat(req.body.extraHours) : undefined;
+      const schedule = await this.service.markCompleted(id, extraHours);
       res.json(successResponse(schedule));
     } catch (error) {
       next(error);
@@ -141,6 +142,51 @@ export class ScheduleController {
       const dateString = req.body.date as string | undefined;
       const result = await this.service.copyLastWeekSchedules(dateString);
       res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  exportICal = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get all schedules
+      const result = await this.service.getAll({ limit: 1000, page: 1 });
+      const schedules = result.data;
+      
+      const ics = require('ics');
+      const events: import('ics').EventAttributes[] = schedules.map(s => {
+        const dateStr = (s.date as Date).toISOString().split('T')[0];
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const [startHour, startMin] = s.startTime.split(':').map(Number);
+        const [endHour, endMin] = s.endTime.split(':').map(Number);
+        
+        // Calculate duration
+        let durationHours = endHour - startHour;
+        let durationMins = endMin - startMin;
+        if (durationMins < 0) {
+          durationMins += 60;
+          durationHours -= 1;
+        }
+
+        return {
+          title: `Dạy: ${s.student?.fullName} - ${s.subject?.name}`,
+          description: `Địa điểm: ${s.location || s.mode}\nNote: ${s.note || ''}\nGhi chú dạy: ${s.teachingNote || ''}`,
+          start: [year, month, day, startHour, startMin],
+          duration: { hours: durationHours, minutes: durationMins },
+          location: s.location || (s.mode === 'ONLINE' ? 'Online' : undefined),
+          status: s.completed ? 'CONFIRMED' : 'TENTATIVE',
+        };
+      });
+
+      const { error, value } = ics.createEvents(events);
+      
+      if (error) {
+        throw new Error('Failed to generate iCal format');
+      }
+
+      res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="quan-ly-gia-su.ics"');
+      res.send(value);
     } catch (error) {
       next(error);
     }

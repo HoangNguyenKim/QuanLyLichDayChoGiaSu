@@ -332,6 +332,7 @@ router.get('/monthly', scheduleController.getMonthly);
  *                       type: integer
  */
 router.get('/', scheduleController.getAll);
+router.get('/export/ical', scheduleController.exportICal);
 
 /**
  * @swagger

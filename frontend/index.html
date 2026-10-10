@@ -4,7 +4,19 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>Tutor Manager</title>
+    <script>
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      function updateTheme(e) {
+        if (e.matches) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      updateTheme(mediaQuery);
+      mediaQuery.addEventListener('change', updateTheme);
+    </script>
   </head>
   <body>
     <div id="root"></div>

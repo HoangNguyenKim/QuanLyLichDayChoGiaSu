@@ -4,7 +4,6 @@ export interface Student {
   address?: string;
   apartmentFloor?: string;
   parentPhone?: string;
-  parentPhone?: string;
   note?: string;
   tuitionFeePerSession?: number;
   previousUnpaidSessions?: number;
